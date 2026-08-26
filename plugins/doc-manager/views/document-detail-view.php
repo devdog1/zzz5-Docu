@@ -54,6 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             doc_add_comment($doc_id, $_POST['comment_text'], $_POST['comment_type'] ?? 'General');
             set_flash_message('success', 'Comment added.');
             redirect(url_for('doc_manager_document_detail') . '&id=' . $doc_id);
+        } elseif ($action === 'add_relationship') {
+            $target_num = trim($_POST['target_document_number']);
+            $target_doc = doc_get_document_by_number($target_num);
+            if ($target_doc) {
+                doc_add_relationship($doc_id, $target_doc['id'], $_POST['relationship_type']);
+                set_flash_message('success', 'Document relationship added.');
+            } else {
+                set_flash_message('danger', 'Target document number not found.');
+            }
+            redirect(url_for('doc_manager_document_detail') . '&id=' . $doc_id);
         } elseif ($action === 'attempt_delete') {
             doc_attempt_delete_document($doc_id);
             set_flash_message('warning', 'Document marked for pending disposition (No hard delete allowed).');
@@ -333,8 +343,11 @@ $relationships = doc_get_relationships($doc_id);
 
             <!-- Related Documents -->
             <div class="card shadow-sm">
-                <div class="card-header bg-white py-3">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="fw-bold mb-0"><i class="fa-solid fa-link me-2 text-secondary"></i>Related Records</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addRelModal">
+                        <i class="fa-solid fa-plus"></i> Link
+                    </button>
                 </div>
                 <div class="card-body">
                     <?php if (empty($relationships)): ?>
@@ -353,6 +366,46 @@ $relationships = doc_get_relationships($doc_id);
                     <?php endif; ?>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Relationship Modal -->
+<div class="modal fade" id="addRelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content text-start">
+            <form method="POST" action="<?= url_for('doc_manager_document_detail') ?>&id=<?= $doc['id'] ?>">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="add_relationship">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">Link Related Document</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Target Document Number</label>
+                        <input type="text" name="target_document_number" class="form-control" placeholder="e.g. RFO-2026-000001" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Relationship Type</label>
+                        <select name="relationship_type" class="form-select">
+                            <option value="Related to">Related to</option>
+                            <option value="Supersedes">Supersedes</option>
+                            <option value="Superseded by">Superseded by</option>
+                            <option value="Caused by">Caused by</option>
+                            <option value="Resulted in">Resulted in</option>
+                            <option value="Follow-up to">Follow-up to</option>
+                            <option value="Parent">Parent</option>
+                            <option value="Child">Child</option>
+                            <option value="Associated legal request">Associated legal request</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Link Record</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

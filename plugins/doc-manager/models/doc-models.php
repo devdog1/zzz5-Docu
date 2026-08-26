@@ -49,11 +49,17 @@ function doc_can_access_lawful_requests() {
     if (!isset($_SESSION['user_id'])) {
         return false;
     }
-    // Check session permissions directly, explicitly ignoring global admin role bypass
+    // Session permissions array is associative: ['perm_name' => true] or indexed list
     $perms = $_SESSION['permissions'] ?? [];
-    return in_array('legal_request.access', $perms) ||
-           in_array('doc_manager_legal_request_access', $perms) ||
-           in_array('doc_manager_manage_lawful_requests', $perms);
+    if (is_array($perms)) {
+        if (isset($perms['legal_request.access']) || isset($perms['doc_manager_legal_request_access']) || isset($perms['doc_manager_manage_lawful_requests'])) {
+            return true;
+        }
+        return in_array('legal_request.access', $perms, true) ||
+               in_array('doc_manager_legal_request_access', $perms, true) ||
+               in_array('doc_manager_manage_lawful_requests', $perms, true);
+    }
+    return false;
 }
 
 /**
@@ -319,15 +325,15 @@ function doc_update_document($doc_id, $data, $change_reason = 'Updated document 
     $metadata = is_array($data['metadata'] ?? null) ? json_encode($data['metadata']) : ($data['metadata'] ?? $doc['metadata']);
     $status = $data['status'] ?? $doc['status'];
 
-    // Track changed fields
+    // Track changed fields with previous and new values
     $changed = [];
-    if ($title !== $doc['title']) $changed[] = 'title';
-    if ($desc !== $doc['description']) $changed[] = 'description';
-    if ($classification !== $doc['classification']) $changed[] = 'classification';
-    if ($content !== $doc['content']) $changed[] = 'content';
-    if ($status !== $doc['status']) $changed[] = 'status';
+    if ($title !== $doc['title']) $changed[] = "title: '{$doc['title']}' -> '{$title}'";
+    if ($desc !== $doc['description']) $changed[] = "description modified";
+    if ($classification !== $doc['classification']) $changed[] = "classification: '{$doc['classification']}' -> '{$classification}'";
+    if ($content !== $doc['content']) $changed[] = "content modified";
+    if ($status !== $doc['status']) $changed[] = "status: '{$doc['status']}' -> '{$status}'";
 
-    $fields_changed_str = implode(', ', $changed);
+    $fields_changed_str = implode('; ', $changed) ?: 'No significant field changes';
 
     $pdb->query("
         UPDATE {$tb_doc}
@@ -414,7 +420,11 @@ function doc_save_rfo_details($doc_id, $data) {
 
     $params = [];
     foreach ($fields as $f) {
-        $params[$f] = $data[$f] ?? null;
+        $val = $data[$f] ?? null;
+        if (is_string($val) && trim($val) === '') {
+            $val = null;
+        }
+        $params[$f] = $val;
     }
 
     if ($exists) {
@@ -468,7 +478,11 @@ function doc_save_post_mortem_details($doc_id, $data) {
 
     $params = [];
     foreach ($fields as $f) {
-        $params[$f] = $data[$f] ?? null;
+        $val = $data[$f] ?? null;
+        if (is_string($val) && trim($val) === '') {
+            $val = null;
+        }
+        $params[$f] = $val;
     }
 
     if ($exists) {
@@ -562,7 +576,11 @@ function doc_save_lawful_request($doc_id, $data) {
 
     $params = [];
     foreach ($fields as $f) {
-        $params[$f] = $data[$f] ?? null;
+        $val = $data[$f] ?? null;
+        if (is_string($val) && trim($val) === '') {
+            $val = null;
+        }
+        $params[$f] = $val;
     }
 
     if (empty($params['internal_request_number'])) {

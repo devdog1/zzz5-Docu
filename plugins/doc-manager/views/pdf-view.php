@@ -21,6 +21,7 @@ doc_audit_log('DOCUMENT_EXPORT_PDF', 'document', $doc_id, 'SUCCESS', ['document_
 
 $approvals = doc_get_approvals($doc_id);
 $site_name = get_setting('site_name', 'ENTERPRISE PORTAL');
+$owner = current_user()['name'] ?? 'Document Owner';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -39,6 +40,11 @@ $site_name = get_setting('site_name', 'ENTERPRISE PORTAL');
         .pdf-footer { border-top: 1px solid #ddd; padding-top: 15px; margin-top: 40px; font-size: 0.85rem; color: #666; text-align: center; }
         @media print {
             .no-print { display: none !important; }
+            @page {
+                @bottom-right {
+                    content: "Page " counter(page) " of " counter(pages);
+                }
+            }
         }
     </style>
 </head>
@@ -52,9 +58,12 @@ $site_name = get_setting('site_name', 'ENTERPRISE PORTAL');
     </div>
 
     <div class="pdf-header d-flex justify-content-between align-items-center">
-        <div>
-            <h2 class="fw-bold mb-0 text-primary"><?= htmlspecialchars($site_name) ?></h2>
-            <small class="text-muted">Official Governed Document Record</small>
+        <div class="d-flex align-items-center">
+            <div class="bg-primary text-white rounded p-2 me-3 fw-bold">ORGANIZATION LOGO</div>
+            <div>
+                <h2 class="fw-bold mb-0 text-primary"><?= htmlspecialchars($site_name) ?></h2>
+                <small class="text-muted">Official Governed Document Record</small>
+            </div>
         </div>
         <div class="text-end">
             <h4 class="fw-bold mb-0 font-monospace"><?= htmlspecialchars($doc['document_number']) ?></h4>
@@ -67,6 +76,7 @@ $site_name = get_setting('site_name', 'ENTERPRISE PORTAL');
             <p class="mb-1"><strong>Document Title:</strong> <?= htmlspecialchars($doc['title']) ?></p>
             <p class="mb-1"><strong>Type:</strong> <?= htmlspecialchars($doc['document_type_name']) ?></p>
             <p class="mb-1"><strong>Classification:</strong> <?= htmlspecialchars($doc['classification']) ?></p>
+            <p class="mb-1"><strong>Document Owner:</strong> <?= htmlspecialchars($owner) ?></p>
         </div>
         <div class="col-6 text-end">
             <p class="mb-1"><strong>Status:</strong> <?= htmlspecialchars($doc['status']) ?></p>
@@ -114,7 +124,7 @@ $site_name = get_setting('site_name', 'ENTERPRISE PORTAL');
 
     <div class="pdf-footer">
         <p class="mb-1"><strong><?= htmlspecialchars($doc['classification']) ?></strong> — <?= htmlspecialchars($site_name) ?> Document Management System</p>
-        <p class="mb-0">Document Verification Identifier: <code><?= htmlspecialchars($doc['verification_code'] ?? 'N/A') ?></code></p>
+        <p class="mb-0">Document Verification Identifier: <code><?= htmlspecialchars($doc['verification_code'] ?? 'N/A') ?></code> | Page <span class="page-number">1</span></p>
     </div>
 </body>
 </html>
