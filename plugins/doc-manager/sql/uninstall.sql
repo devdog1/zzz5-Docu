@@ -1,0 +1,16 @@
+DROP TABLE IF EXISTS {prefix}comments;
+DROP TABLE IF EXISTS {prefix}audit_log;
+DROP TABLE IF EXISTS {prefix}document_attachments;
+DROP TABLE IF EXISTS {prefix}document_relationships;
+DROP TABLE IF EXISTS {prefix}legal_hold_documents;
+DROP TABLE IF EXISTS {prefix}legal_holds;
+DROP TABLE IF EXISTS {prefix}chain_of_custody;
+DROP TABLE IF EXISTS {prefix}lawful_requests;
+DROP TABLE IF EXISTS {prefix}post_mortem_actions;
+DROP TABLE IF EXISTS {prefix}post_mortem_details;
+DROP TABLE IF EXISTS {prefix}rfo_timelines;
+DROP TABLE IF EXISTS {prefix}rfo_details;
+DROP TABLE IF EXISTS {prefix}document_approvals;
+DROP TABLE IF EXISTS {prefix}document_versions;
+DROP TABLE IF EXISTS {prefix}documents;
+DROP TABLE IF EXISTS {prefix}document_types;
