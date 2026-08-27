@@ -15,6 +15,7 @@ if (!doc_can_access_lawful_requests()) {
 }
 
 $selected_id = (int)($_GET['id'] ?? 0);
+$all_users = function_exists('get_all_users') ? get_all_users() : [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -185,12 +186,26 @@ $custody_logs = $selected_doc ? doc_get_chain_of_custody($selected_doc['id']) : 
                                     <input type="text" name="badge_or_id_number" class="form-control" value="<?= htmlspecialchars($request_details['badge_or_id_number'] ?? '') ?>">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Court / Jurisdiction</label>
-                                    <input type="text" name="court_jurisdiction" class="form-control" value="<?= htmlspecialchars($request_details['court_jurisdiction'] ?? '') ?>">
+                                    <label class="form-label fw-semibold">Assigned Legal Handler</label>
+                                    <select name="assigned_handler_user_id" class="form-select">
+                                        <option value="">Unassigned</option>
+                                        <?php foreach ($all_users as $u): ?>
+                                            <option value="<?= $u['id'] ?>" <?= ($request_details['assigned_handler_user_id'] ?? 0) == $u['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Court File Number</label>
-                                    <input type="text" name="court_file_number" class="form-control" value="<?= htmlspecialchars($request_details['court_file_number'] ?? '') ?>">
+                                    <label class="form-label fw-semibold">Approving Authority</label>
+                                    <select name="approving_authority_user_id" class="form-select">
+                                        <option value="">Unassigned</option>
+                                        <?php foreach ($all_users as $u): ?>
+                                            <option value="<?= $u['id'] ?>" <?= ($request_details['approving_authority_user_id'] ?? 0) == $u['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">Response Deadline</label>

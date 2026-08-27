@@ -61,10 +61,12 @@ CREATE TABLE IF NOT EXISTS {prefix}document_approvals (
     document_id INT NOT NULL,
     step_number INT DEFAULT 1,
     step_name VARCHAR(100),
-    approver_user_id INT,
+    authorized_user_ids TEXT,
     required_role VARCHAR(100),
+    approver_user_id INT,
     status VARCHAR(50) DEFAULT 'Pending',
     comments TEXT,
+    signature_hash VARCHAR(64),
     decided_at DATETIME
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/../models/doc-models.php';
@@ -38,16 +38,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect(url_for('doc_manager_document_detail') . '&id=' . $doc_id);
         } elseif ($action === 'initiate_workflow') {
             $type = doc_get_type($doc['document_type_id']);
-            $steps = json_decode($type['workflow_steps'] ?? '[]', true);
-            if (empty($steps)) {
-                $steps = ['Author', 'Reviewer', 'Approver'];
+            $raw_steps = json_decode($type['workflow_steps'] ?? '[]', true);
+            if (empty($raw_steps)) {
+                $raw_steps = ['Author Sign-off', 'Technical Reviewer Sign-off', 'Manager Approval'];
             }
-            doc_initiate_approval_workflow($doc_id, $steps);
-            set_flash_message('success', 'Approval workflow initiated.');
+            doc_initiate_approval_workflow($doc_id, $raw_steps);
+            set_flash_message('success', 'Document authorization workflow initiated.');
             redirect(url_for('doc_manager_document_detail') . '&id=' . $doc_id);
         } elseif ($action === 'approval_decision') {
             doc_record_approval_decision($doc_id, $_POST['step_id'], $_POST['decision'], $_POST['comments'] ?? '');
-            set_flash_message('success', 'Approval decision recorded.');
+            set_flash_message('success', 'Authorization sign-off recorded.');
             redirect(url_for('doc_manager_document_detail') . '&id=' . $doc_id);
         } elseif ($action === 'add_comment') {
             doc_add_comment($doc_id, $_POST['comment_text'], $_POST['comment_type'] ?? 'General');
@@ -200,47 +200,60 @@ $canned = doc_get_canned_paragraphs();
                 </div>
             </div>
 
-            <!-- Approval Workflow Panel -->
-            <div class="card shadow-sm mb-4">
+            <!-- Multi-Authority Authorization Sign-off Panel -->
+            <div class="card shadow-sm mb-4 border-start border-4 border-success">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="fw-bold mb-0"><i class="fa-solid fa-clipboard-check me-2 text-success"></i>Approval Workflow</h5>
+                    <h5 class="fw-bold mb-0 text-success"><i class="fa-solid fa-file-signature me-2"></i>Multi-Authority Authorization Sign-off Flow</h5>
                     <?php if (empty($approvals)): ?>
                         <form method="POST" action="<?= url_for('doc_manager_document_detail') ?>&id=<?= $doc['id'] ?>">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="initiate_workflow">
-                            <button type="submit" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-play me-1"></i> Start Workflow</button>
+                            <button type="submit" class="btn btn-sm btn-success"><i class="fa-solid fa-play me-1"></i> Initiate Authorization Flow</button>
                         </form>
                     <?php endif; ?>
                 </div>
                 <div class="card-body">
                     <?php if (empty($approvals)): ?>
-                        <p class="text-muted mb-0">No active approval workflow steps initialized yet.</p>
+                        <p class="text-muted mb-0">No active multi-authority sign-off steps initialized yet. Click above to start authorization workflow.</p>
                     <?php else: ?>
                         <div class="list-group">
                             <?php foreach ($approvals as $app): ?>
+                                <?php $can_sign = doc_can_user_sign_off_step($app); ?>
                                 <div class="list-group-item d-flex justify-content-between align-items-center py-3">
                                     <div>
-                                        <span class="badge bg-secondary me-2">Step <?= $app['step_number'] ?></span>
-                                        <strong class="text-dark"><?= htmlspecialchars($app['step_name']) ?></strong>
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-secondary me-2">Step <?= $app['step_number'] ?></span>
+                                            <strong class="text-dark fs-6"><?= htmlspecialchars($app['step_name']) ?></strong>
+                                        </div>
                                         <?php if (!empty($app['approver_name'])): ?>
-                                            <span class="small text-muted ms-2">(Decided by <?= htmlspecialchars($app['approver_name']) ?>)</span>
+                                            <div class="small text-success">
+                                                <i class="fa-solid fa-circle-check me-1"></i> Signed off by <strong><?= htmlspecialchars($app['approver_name']) ?></strong>
+                                                on <?= date('M d, Y H:i', strtotime($app['decided_at'])) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($app['signature_hash'])): ?>
+                                            <div class="small text-muted font-monospace mt-1">Signature Hash: <code><?= htmlspecialchars(substr($app['signature_hash'], 0, 24)) ?>...</code></div>
                                         <?php endif; ?>
                                         <?php if (!empty($app['comments'])): ?>
                                             <p class="small text-muted mb-0 mt-1"><em>"<?= htmlspecialchars($app['comments']) ?>"</em></p>
                                         <?php endif; ?>
                                     </div>
                                     <div class="d-flex align-items-center">
-                                        <span class="badge bg-<?= $app['status'] === 'Approved' ? 'success' : ($app['status'] === 'Pending' ? 'warning text-dark' : 'secondary') ?> me-3">
+                                        <span class="badge bg-<?= $app['status'] === 'Approved' ? 'success' : ($app['status'] === 'Pending' ? 'warning text-dark' : 'secondary') ?> fs-6 px-3 py-2 me-3">
                                             <?= htmlspecialchars($app['status']) ?>
                                         </span>
 
                                         <?php if ($app['status'] === 'Pending'): ?>
-                                            <button type="button" class="btn btn-sm btn-success me-1" data-bs-toggle="modal" data-bs-target="#approveModal<?= $app['id'] ?>">
-                                                Approve / Reject
-                                            </button>
+                                            <?php if ($can_sign): ?>
+                                                <button type="button" class="btn btn-sm btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#signOffModal<?= $app['id'] ?>">
+                                                    <i class="fa-solid fa-signature me-1"></i> Sign Off Document
+                                                </button>
+                                            <?php else: ?>
+                                                <span class="badge bg-light text-muted border">Awaiting Designated Sign-off Authority</span>
+                                            <?php endif; ?>
 
-                                            <!-- Approval Decision Modal -->
-                                            <div class="modal fade" id="approveModal<?= $app['id'] ?>" tabindex="-1">
+                                            <!-- Sign Off Modal -->
+                                            <div class="modal fade" id="signOffModal<?= $app['id'] ?>" tabindex="-1">
                                                 <div class="modal-dialog">
                                                     <div class="modal-content text-start">
                                                         <form method="POST" action="<?= url_for('doc_manager_document_detail') ?>&id=<?= $doc['id'] ?>">
@@ -248,22 +261,25 @@ $canned = doc_get_canned_paragraphs();
                                                             <input type="hidden" name="action" value="approval_decision">
                                                             <input type="hidden" name="step_id" value="<?= $app['id'] ?>">
                                                             <div class="modal-header bg-success text-white">
-                                                                <h5 class="modal-title fw-bold">Approval Step: <?= htmlspecialchars($app['step_name']) ?></h5>
+                                                                <h5 class="modal-title fw-bold"><i class="fa-solid fa-file-signature me-2"></i>Authorization Sign-off: <?= htmlspecialchars($app['step_name']) ?></h5>
                                                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                             </div>
                                                             <div class="modal-body">
-                                                                <label class="form-label fw-semibold">Decision</label>
+                                                                <p class="text-dark small mb-3">You are executing an official authorization sign-off on <strong><?= htmlspecialchars($doc['document_number']) ?></strong>. A SHA-256 digital signature hash will be permanently recorded in the audit trail.</p>
+
+                                                                <label class="form-label fw-semibold">Sign-off Decision</label>
                                                                 <select name="decision" class="form-select mb-3" required>
-                                                                    <option value="Approve">Approve</option>
+                                                                    <option value="Approve">Approve & Authorize Document</option>
                                                                     <option value="Request Changes">Request Changes</option>
-                                                                    <option value="Reject">Reject</option>
+                                                                    <option value="Reject">Reject Document</option>
                                                                 </select>
-                                                                <label class="form-label fw-semibold">Comments / Reason</label>
-                                                                <textarea name="comments" class="form-control" rows="3" placeholder="Enter notes..."></textarea>
+
+                                                                <label class="form-label fw-semibold">Sign-off Comments / Rationale</label>
+                                                                <textarea name="comments" class="form-control" rows="3" placeholder="Enter authorization notes..."></textarea>
                                                             </div>
                                                             <div class="modal-footer">
                                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                <button type="submit" class="btn btn-success">Submit Decision</button>
+                                                                <button type="submit" class="btn btn-success fw-bold"><i class="fa-solid fa-check me-1"></i> Execute Digital Sign-off</button>
                                                             </div>
                                                         </form>
                                                     </div>

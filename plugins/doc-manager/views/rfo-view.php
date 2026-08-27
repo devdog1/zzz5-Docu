@@ -1,11 +1,12 @@
 <?php
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/../models/doc-models.php';
 
 $selected_id = (int)($_GET['id'] ?? 0);
+$all_users = function_exists('get_all_users') ? get_all_users() : [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -28,11 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect(url_for('doc_manager_rfo') . '&id=' . $doc_id);
         } elseif ($action === 'update_rfo') {
             $doc_id = (int)$_POST['document_id'];
+            $existing = doc_get_document($doc_id);
             doc_update_document($doc_id, [
-                'title' => $_POST['title'],
-                'description' => $_POST['impact_description'],
-                'classification' => $_POST['classification'],
-                'status' => $_POST['status']
+                'title' => $_POST['title'] ?? ($existing['title'] ?? ''),
+                'description' => $_POST['impact_description'] ?? ($existing['description'] ?? ''),
+                'classification' => $_POST['classification'] ?? ($existing['classification'] ?? 'Internal'),
+                'status' => $_POST['status'] ?? ($existing['status'] ?? 'In Progress')
             ], 'Updated RFO Details', false);
 
             doc_save_rfo_details($doc_id, $_POST);
@@ -143,17 +145,50 @@ $timelines = $selected_doc ? doc_get_rfo_timelines($selected_doc['id']) : [];
                                         <option value="Public" <?= $selected_doc['classification'] === 'Public' ? 'selected' : '' ?>>Public</option>
                                     </select>
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Assigned Incident Owner</label>
+                                    <select name="assigned_owner_id" class="form-select">
+                                        <option value="">Unassigned</option>
+                                        <?php foreach ($all_users as $u): ?>
+                                            <option value="<?= $u['id'] ?>" <?= ($rfo_details['assigned_owner_id'] ?? 0) == $u['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?> (<?= htmlspecialchars($u['email']) ?>)
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Technical Reviewer</label>
+                                    <select name="reviewer_id" class="form-select">
+                                        <option value="">Unassigned</option>
+                                        <?php foreach ($all_users as $u): ?>
+                                            <option value="<?= $u['id'] ?>" <?= ($rfo_details['reviewer_id'] ?? 0) == $u['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Approving Authority</label>
+                                    <select name="approver_id" class="form-select">
+                                        <option value="">Unassigned</option>
+                                        <?php foreach ($all_users as $u): ?>
+                                            <option value="<?= $u['id'] ?>" <?= ($rfo_details['approver_id'] ?? 0) == $u['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-semibold">Start Datetime</label>
-                                    <input type="datetime-local" name="start_datetime" class="form-control" value="<?= $rfo_details['start_datetime'] ? date('Y-m-d\TH:i', strtotime($rfo_details['start_datetime'])) : '' ?>">
+                                    <input type="datetime-local" name="start_datetime" class="form-control" value="<?= !empty($rfo_details['start_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['start_datetime'])) : '' ?>">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-semibold">Detection Datetime</label>
-                                    <input type="datetime-local" name="detection_datetime" class="form-control" value="<?= $rfo_details['detection_datetime'] ? date('Y-m-d\TH:i', strtotime($rfo_details['detection_datetime'])) : '' ?>">
+                                    <input type="datetime-local" name="detection_datetime" class="form-control" value="<?= !empty($rfo_details['detection_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['detection_datetime'])) : '' ?>">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-semibold">Restoration Datetime</label>
-                                    <input type="datetime-local" name="service_restoration_datetime" class="form-control" value="<?= $rfo_details['service_restoration_datetime'] ? date('Y-m-d\TH:i', strtotime($rfo_details['service_restoration_datetime'])) : '' ?>">
+                                    <input type="datetime-local" name="service_restoration_datetime" class="form-control" value="<?= !empty($rfo_details['service_restoration_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['service_restoration_datetime'])) : '' ?>">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-semibold">Total Duration</label>

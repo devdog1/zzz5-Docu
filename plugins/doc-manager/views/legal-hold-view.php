@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/../models/doc-models.php';
@@ -12,6 +12,8 @@ if (!doc_can_access_lawful_requests()) {
        . '</div></div>';
     return;
 }
+
+$all_users = function_exists('get_all_users') ? get_all_users() : [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -99,7 +101,7 @@ $holds = doc_get_all_legal_holds();
                                         </span>
                                     </td>
                                     <td><?= htmlspecialchars($h['start_date']) ?></td>
-                                    <td><small><?= htmlspecialchars($h['custodians'] ?: 'All') ?></small></td>
+                                    <td><small><?= htmlspecialchars($h['custodians'] ?: 'All Custodians') ?></small></td>
                                     <td>
                                         <?php if ($h['status'] === 'Active'): ?>
                                             <button type="button" class="btn btn-sm btn-outline-danger me-1" data-bs-toggle="modal" data-bs-target="#linkDocModal<?= $h['id'] ?>">
@@ -194,16 +196,23 @@ $holds = doc_get_all_legal_holds();
                             <input type="text" name="authority" class="form-control" placeholder="e.g. General Counsel / Superior Court">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Custodians / Affected Employees</label>
-                            <input type="text" name="custodians" class="form-control" placeholder="e.g. John Doe, Jane Smith">
+                            <label class="form-label fw-semibold">Target Custodian Employee</label>
+                            <select name="custodians" class="form-select">
+                                <option value="">All Custodians / Broad Scope</option>
+                                <?php foreach ($all_users as $u): ?>
+                                    <option value="<?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?>">
+                                        <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?> (<?= htmlspecialchars($u['email']) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Related Case / Request #</label>
                             <input type="text" name="related_case_request" class="form-control" placeholder="e.g. CASE-2026-88">
                         </div>
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Scope & Reason</label>
-                            <textarea name="reason" class="form-control" rows="3" placeholder="Define preservation parameters and rationale..."></textarea>
+                            <label class="form-label fw-semibold">Scope & Rationale</label>
+                            <textarea name="reason" class="form-control" rows="3" placeholder="Define preservation parameters and legal rationale..."></textarea>
                         </div>
                     </div>
                 </div>

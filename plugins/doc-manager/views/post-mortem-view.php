@@ -1,11 +1,12 @@
 <?php
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/../models/doc-models.php';
 
 $selected_id = (int)($_GET['id'] ?? 0);
+$all_users = function_exists('get_all_users') ? get_all_users() : [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
@@ -254,7 +255,13 @@ $pm_actions = $selected_doc ? doc_get_post_mortem_actions($selected_doc['id']) :
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label fw-semibold">Assigned User/Team <span class="text-danger">*</span></label>
-                            <input type="text" name="assigned_to" class="form-control" required placeholder="e.g. SysAdmin / NOC Team">
+                            <select name="assigned_to" class="form-select" required>
+                                <?php foreach ($all_users as $u): ?>
+                                    <option value="<?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?>">
+                                        <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="col-6">
                             <label class="form-label fw-semibold">Priority</label>

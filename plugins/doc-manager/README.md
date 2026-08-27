@@ -1,6 +1,6 @@
 # Document Management System Plugin (`doc-manager`)
 
-An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, append-only audit trail logging, retention disposition management, automated background tasks, configurable background classification watermarks, verification QR codes, granular sub-module enable/disable toggles, and professional PDF generation.
+An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, multi-authority approval sign-offs, immutable version control, audit trail logging, retention disposition management, automated background tasks, configurable background classification watermarks, verification QR codes, granular sub-module enable/disable toggles, and professional PDF generation.
 
 ---
 
@@ -9,22 +9,24 @@ An enterprise-grade, highly governed Document Management module built for the `z
 2. [Modular Domain Architecture](#modular-domain-architecture)
 3. [Verbose Plugin Settings & Module Toggles](#verbose-plugin-settings--module-toggles)
 4. [Word-Style WYSIWYG Editor & Templates](#word-style-wysiwyg-editor--templates)
-5. [Security Classifications & RBAC](#security-classifications--rbac)
-6. [Document Types & Auto-Numbering](#document-types--auto-numbering)
-7. [RFO / Incident Report Module](#rfo--incident-report-module)
-8. [Post-Mortem Module & Action Tracking](#post-mortem-module--action-tracking)
-9. [Lawful Request & Chain of Custody Module](#lawful-request--chain-of-custody-module)
-10. [Legal Hold Module](#legal-hold-module)
-11. [Approval Workflows & Version Control](#approval-workflows--version-control)
-12. [Retention & Disposition Management](#retention--disposition-management)
-13. [Background Scheduled Tasks](#background-scheduled-tasks)
-14. [PDF Watermarks, Verification QR Code & Audit Trail Inspector](#pdf-watermarks-verification-qr-code--audit-trail-inspector)
-15. [Installation & Database Isolation](#installation--database-isolation)
+5. [Multi-Authority Authorization Sign-Offs](#multi-authority-authorization-sign-offs)
+6. [Security Classifications & RBAC](#security-classifications--rbac)
+7. [Document Types & Auto-Numbering](#document-types--auto-numbering)
+8. [RFO / Incident Report Module](#rfo--incident-report-module)
+9. [Post-Mortem Module & Action Tracking](#post-mortem-module--action-tracking)
+10. [Lawful Request & Chain of Custody Module](#lawful-request--chain-of-custody-module)
+11. [Legal Hold Module](#legal-hold-module)
+12. [Approval Workflows & Version Control](#approval-workflows--version-control)
+13. [Retention & Disposition Management](#retention--disposition-management)
+14. [Background Scheduled Tasks](#background-scheduled-tasks)
+15. [PDF Watermarks, Verification QR Code & Audit Trail Inspector](#pdf-watermarks-verification-qr-code--audit-trail-inspector)
+16. [Installation & Database Isolation](#installation--database-isolation)
 
 ---
 
 ## Key Features
 
+- **Multi-Authority Authorization Sign-offs**: Designate multiple sign-off authorities (specific users or required roles) per workflow step. Generates SHA-256 digital signature audit hashes upon sign-off.
 - **Verification QR Code**: PDF exports render an inline verification QR code encoding the document verification URL for mobile scanning and instant version verification.
 - **Audit Trail Inspector**: Dedicated tab in Admin Settings for inspecting append-only audit logs with dynamic filtering and CSV export.
 - **Modular Domain Models**: Refactored domain architecture split across dedicated files (`doc-core-models.php`, `doc-types-models.php`, `doc-crud-models.php`, `doc-rfo-models.php`, `doc-postmortem-models.php`, `doc-lawful-models.php`, `doc-legalhold-models.php`, `doc-workflow-models.php`, `doc-retention-models.php`).
@@ -41,6 +43,14 @@ An enterprise-grade, highly governed Document Management module built for the `z
 - **Legal Holds**: Issue litigation holds across specific documents or categories, freezing deletions and suspending retention expiry.
 - **No Hard Delete Enforcement**: Enforces soft disposition states (`Pending Disposition`, `Destroyed Certificate`) to preserve compliance history.
 - **Background Scheduled Tasks**: Automated daily retention expiry checks and hourly deadline/overdue alert monitoring.
+
+---
+
+## Multi-Authority Authorization Sign-offs
+
+- **Designated Signers**: Document workflows allow admins and owners to specify multiple designated sign-off authorities (specific users or required roles) for each approval step.
+- **Digital Signature Hashes**: When an authorized user executes a sign-off, a unique SHA-256 signature hash is generated, recording the user ID, step ID, document ID, decision, and timestamp.
+- **Sign-off Audit Stamps**: Exported PDF documents display official digital signature stamps with signer names, step titles, timestamps, and signature hashes.
 
 ---
 

@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/../models/doc-models.php';
@@ -45,6 +45,7 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . 
         .classification-header.PUBLIC { background-color: #198754; color: #fff; }
         .pdf-footer { border-top: 1px solid #ddd; padding-top: 15px; margin-top: 40px; font-size: 0.85rem; color: #666; text-align: center; position: relative; z-index: 2; }
         .rich-content img { max-width: 100%; height: auto; }
+        .signature-stamp { border: 2px dashed #198754; background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 12px; }
 
         <?php if ($watermark_enabled === '1'): ?>
         .watermark-container {
@@ -158,29 +159,26 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . 
 
         <?php if (!empty($approvals)): ?>
             <div class="mb-5">
-                <h5 class="fw-bold text-dark mb-3">Approval History</h5>
-                <table class="table table-bordered table-sm">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Step</th>
-                            <th>Workflow Step</th>
-                            <th>Approver</th>
-                            <th>Status</th>
-                            <th>Decided At</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($approvals as $app): ?>
-                            <tr>
-                                <td><?= $app['step_number'] ?></td>
-                                <td><?= htmlspecialchars($app['step_name']) ?></td>
-                                <td><?= htmlspecialchars($app['approver_name'] ?: 'N/A') ?></td>
-                                <td><?= htmlspecialchars($app['status']) ?></td>
-                                <td><?= htmlspecialchars($app['decided_at'] ?: 'N/A') ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-file-signature me-2 text-success"></i>Digital Authorization Sign-off Audit</h5>
+                <div class="row g-3">
+                    <?php foreach ($approvals as $app): ?>
+                        <div class="col-md-6">
+                            <div class="signature-stamp">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="text-primary"><?= htmlspecialchars($app['step_name']) ?></strong>
+                                    <span class="badge bg-<?= $app['status'] === 'Approved' ? 'success' : 'secondary' ?>"><?= htmlspecialchars($app['status']) ?></span>
+                                </div>
+                                <div><strong>Authorized Signer:</strong> <?= htmlspecialchars($app['approver_name'] ?: 'Pending Assignment') ?></div>
+                                <?php if (!empty($app['decided_at'])): ?>
+                                    <div><strong>Signed At:</strong> <?= date('F d, Y H:i:s', strtotime($app['decided_at'])) ?></div>
+                                <?php endif; ?>
+                                <?php if (!empty($app['signature_hash'])): ?>
+                                    <div><strong>Signature Hash:</strong> <code class="small"><?= htmlspecialchars(substr($app['signature_hash'], 0, 24)) ?>...</code></div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         <?php endif; ?>
 
