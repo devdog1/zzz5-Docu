@@ -16,7 +16,6 @@ if (!doc_can_user_view_document($doc)) {
     die("Access Denied: You do not have permission to view this document.");
 }
 
-// Record document access in audit log
 doc_audit_log('DOCUMENT_ACCESS', 'document', $doc_id, 'SUCCESS', ['document_number' => $doc['document_number']]);
 
 // POST Action handling
@@ -78,7 +77,12 @@ $versions = doc_get_versions($doc_id);
 $approvals = doc_get_approvals($doc_id);
 $comments = doc_get_comments($doc_id);
 $relationships = doc_get_relationships($doc_id);
+$canned = doc_get_canned_paragraphs();
 ?>
+
+<!-- Quill WYSIWYG Rich Editor Resources -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 
 <div class="container-fluid py-4">
     <!-- Header Banner -->
@@ -119,9 +123,10 @@ $relationships = doc_get_relationships($doc_id);
                     <h5 class="fw-bold mb-0"><i class="fa-solid fa-file-lines me-2 text-primary"></i>Document Content & Metadata</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="<?= url_for('doc_manager_document_detail') ?>&id=<?= $doc['id'] ?>">
+                    <form method="POST" action="<?= url_for('doc_manager_document_detail') ?>&id=<?= $doc['id'] ?>" id="editDocForm">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="update_document">
+                        <input type="hidden" name="content" id="editContentInput">
 
                         <div class="row g-3">
                             <div class="col-md-8">
@@ -157,10 +162,26 @@ $relationships = doc_get_relationships($doc_id);
                                 <label class="form-label fw-semibold">Summary / Description</label>
                                 <textarea name="description" class="form-control" rows="2"><?= htmlspecialchars($doc['description'] ?? '') ?></textarea>
                             </div>
+
                             <div class="col-12">
-                                <label class="form-label fw-semibold">Body Content</label>
-                                <textarea name="content" class="form-control" rows="10"><?= htmlspecialchars($doc['content'] ?? '') ?></textarea>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label fw-semibold mb-0">Rich Text Body Content</label>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            Insert Canned Paragraph
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <?php foreach ($canned as $ckey => $cval): ?>
+                                                <li><a class="dropdown-item small" href="#" onclick="insertEditCannedText(<?= json_encode($cval) ?>); return false;"><?= htmlspecialchars(ucwords(str_replace('_', ' ', $ckey))) ?></a></li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="editQuillEditor" style="min-height: 350px; background:#fff;">
+                                    <?= $doc['content'] ?? '' ?>
+                                </div>
                             </div>
+
                             <div class="col-md-8">
                                 <label class="form-label fw-semibold">Reason for Modification</label>
                                 <input type="text" name="change_reason" class="form-control" placeholder="Describe changes made..." required>
@@ -172,7 +193,7 @@ $relationships = doc_get_relationships($doc_id);
                                 </div>
                             </div>
                             <div class="col-12 text-end">
-                                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i> Save New Version</button>
+                                <button type="submit" class="btn btn-primary" onclick="syncEditQuill()"><i class="fa-solid fa-floppy-disk me-1"></i> Save New Version</button>
                             </div>
                         </div>
                     </form>
@@ -409,3 +430,33 @@ $relationships = doc_get_relationships($doc_id);
         </div>
     </div>
 </div>
+
+<script>
+    let editQuill;
+    document.addEventListener('DOMContentLoaded', function() {
+        editQuill = new Quill('#editQuillEditor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, 4, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image'],
+                    ['clean']
+                ]
+            }
+        });
+    });
+
+    function syncEditQuill() {
+        document.getElementById('editContentInput').value = editQuill.root.innerHTML;
+    }
+
+    function insertEditCannedText(text) {
+        let range = editQuill.getSelection(true);
+        editQuill.insertText(range.index, text);
+    }
+</script>

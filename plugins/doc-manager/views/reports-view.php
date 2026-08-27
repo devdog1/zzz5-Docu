@@ -16,9 +16,9 @@ if ($can_legal) {
     $lawful_count = count($lwos);
 }
 
-// Group RFOs by severity
-$sev1_count = count(array_filter($all_rfos, fn($r) => strpos($r['title'], 'SEV-1') !== false || ($doc['incident_severity'] ?? '') === 'SEV-1'));
-$sev2_count = count(array_filter($all_rfos, fn($r) => strpos($r['title'], 'SEV-2') !== false || ($doc['incident_severity'] ?? '') === 'SEV-2'));
+// Group RFOs by severity safely
+$sev1_count = count(array_filter($all_rfos, fn($r) => strpos($r['title'], 'SEV-1') !== false || ($r['classification'] ?? '') === 'SEV-1'));
+$sev2_count = count(array_filter($all_rfos, fn($r) => strpos($r['title'], 'SEV-2') !== false || ($r['classification'] ?? '') === 'SEV-2'));
 
 $completed_actions = count(array_filter($all_actions, fn($a) => $a['status'] === 'Completed'));
 $open_actions = count($all_actions) - $completed_actions;

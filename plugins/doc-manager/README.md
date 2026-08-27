@@ -1,27 +1,31 @@
 # Document Management System Plugin (`doc-manager`)
 
-An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, strict security classification access controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, audit trail logging, retention disposition management, automated background tasks, and professional PDF generation.
+An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, audit trail logging, retention disposition management, automated background tasks, and professional PDF generation.
 
 ---
 
 ## Table of Contents
 1. [Key Features](#key-features)
-2. [Security Classifications & RBAC](#security-classifications--rbac)
-3. [Document Types & Auto-Numbering](#document-types--auto-numbering)
-4. [RFO / Incident Report Module](#rfo--incident-report-module)
-5. [Post-Mortem Module & Action Tracking](#post-mortem-module--action-tracking)
-6. [Lawful Request & Chain of Custody Module](#lawful-request--chain-of-custody-module)
-7. [Legal Hold Module](#legal-hold-module)
-8. [Approval Workflows & Version Control](#approval-workflows--version-control)
-9. [Retention & Disposition Management](#retention--disposition-management)
-10. [Background Scheduled Tasks](#background-scheduled-tasks)
-11. [Immutable Audit Log & PDF Export](#immutable-audit-log--pdf-export)
-12. [Installation & Database Isolation](#installation--database-isolation)
+2. [Word-Style WYSIWYG Editor & Templates](#word-style-wysiwyg-editor--templates)
+3. [Security Classifications & RBAC](#security-classifications--rbac)
+4. [Document Types & Auto-Numbering](#document-types--auto-numbering)
+5. [RFO / Incident Report Module](#rfo--incident-report-module)
+6. [Post-Mortem Module & Action Tracking](#post-mortem-module--action-tracking)
+7. [Lawful Request & Chain of Custody Module](#lawful-request--chain-of-custody-module)
+8. [Legal Hold Module](#legal-hold-module)
+9. [Approval Workflows & Version Control](#approval-workflows--version-control)
+10. [Retention & Disposition Management](#retention--disposition-management)
+11. [Background Scheduled Tasks](#background-scheduled-tasks)
+12. [Immutable Audit Log & PDF Export](#immutable-audit-log--pdf-export)
+13. [Installation & Database Isolation](#installation--database-isolation)
 
 ---
 
 ## Key Features
 
+- **Word-Style WYSIWYG Editor**: Create and format document body content with headings, rich text formatting (bold, italic, underline, colors, text alignment, lists, tables), pasted images/logos, and canned paragraphs.
+- **Document Templates & Placeholders**: Document types define default HTML templates with dynamic tags: `{ORGANIZATION_LOGO}`, `{DOCUMENT_NUMBER}`, `{TITLE}`, `{CLASSIFICATION}`, `{DEPARTMENT}`, `{DATE}`, and `{OWNER}`.
+- **Canned Paragraph Snippets**: Quick-insert pre-approved text blocks (Confidentiality Notices, Incident Analysis Disclaimers, Legal Hold Warnings, Regulatory Statements).
 - **Document Auto-Numbering**: Formats document identifiers automatically based on configurable type templates (e.g., `RFO-2026-000123`, `PM-2026-000087`, `LWO-2026-000015`, `LH-2026-000004`, `SEC-2026-000032`, `POL-2026-000009`).
 - **Security Classifications**: Supports `Public`, `Internal`, `Confidential`, and `Restricted` documents with explicit permission enforcement.
 - **RFO / Incident Report Module**: Tracks incident severity (SEV-1, SEV-2, SEV-3), root cause, service impacts, resolution, and interactive event timelines.
@@ -30,7 +34,22 @@ An enterprise-grade, highly governed Document Management module built for the `z
 - **Legal Holds**: Issue litigation holds across specific documents or categories, freezing deletions and suspending retention expiry.
 - **No Hard Delete Enforcement**: Enforces soft disposition states (`Pending Disposition`, `Destroyed Certificate`) to preserve compliance history.
 - **Background Scheduled Tasks**: Automated daily retention expiry checks and hourly deadline/overdue alert monitoring.
-- **PDF Export**: Renders professional printable document views complete with classification headers, footers, approval logs, and verification hash codes.
+- **PDF Export**: Renders professional printable document views complete with classification headers, company logo, footers, approval logs, and verification hash codes.
+
+---
+
+## Word-Style WYSIWYG Editor & Templates
+
+- **Rich Text Toolbar**: Full formatting support including headings (H1-H4), text styles, colors, alignment, lists, blockquotes, links, and embedded images.
+- **Dynamic Placeholder Tags**:
+  - `{ORGANIZATION_LOGO}`: Embedded company logo.
+  - `{DOCUMENT_NUMBER}`: Auto-generated document number.
+  - `{TITLE}`: Document title.
+  - `{CLASSIFICATION}`: Document security classification.
+  - `{DEPARTMENT}`: Department name.
+  - `{DATE}`: Document date.
+  - `{OWNER}`: Document owner/author name.
+- **Canned Snippets**: One-click insertion of standardized legal disclaimers and compliance notices.
 
 ---
 
@@ -62,6 +81,7 @@ Document types are fully configurable through the administration interface (`ind
 - **Default Security Classification**
 - **Numbering Format** (e.g., `{CODE}-{YYYY}-{NUMBER:6}`)
 - **Default Workflow Steps & Retention Period (Years)**
+- **Default WYSIWYG Document Body Template**
 
 Example numbering output:
 - `RFO-2026-000123`
@@ -136,7 +156,7 @@ The plugin registers background scheduled jobs with the framework's `Scheduler`:
 ## Immutable Audit Log & PDF Export
 
 - **Audit Log**: Every creation, access, update, export, approval, classification change, or legal hold operation is logged in `plug_doc_manager_audit_log` with user ID, IP, timestamp, session ID, and metadata.
-- **PDF Export**: Generates printable document records with security banners (e.g., `CONFIDENTIAL — INTERNAL USE ONLY`), document metadata, approval signatures, and verification hashes.
+- **PDF Export**: Generates printable document records with security banners (e.g., `CONFIDENTIAL — INTERNAL USE ONLY`), company logo, document metadata, approval signatures, and verification hashes.
 
 ---
 

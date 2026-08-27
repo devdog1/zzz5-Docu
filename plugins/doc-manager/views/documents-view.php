@@ -73,7 +73,12 @@ $criteria = [
 
 $documents = doc_search_documents($criteria);
 $types = doc_get_all_types();
+$canned = doc_get_canned_paragraphs();
 ?>
+
+<!-- Quill WYSIWYG Rich Editor Resources -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -210,19 +215,21 @@ $types = doc_get_all_types();
     </div>
 </div>
 
-<!-- Create Document Modal -->
+<!-- Create Document Modal with Word-style WYSIWYG Editor -->
 <div class="modal fade" id="createDocModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <form method="POST" action="<?= url_for('doc_manager_documents') ?>">
+            <form method="POST" action="<?= url_for('doc_manager_documents') ?>" id="createDocForm">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="create_document">
+                <input type="hidden" name="content" id="createContentInput">
+
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-header-title mb-0 fw-bold"><i class="fa-solid fa-file-circle-plus me-2"></i>Create New Document</h5>
+                    <h5 class="modal-header-title mb-0 fw-bold"><i class="fa-solid fa-file-word me-2"></i>Create New Governed Document</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row g-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Document Type <span class="text-danger">*</span></label>
                             <select name="document_type_id" class="form-select" required>
@@ -244,29 +251,72 @@ $types = doc_get_all_types();
                                 <?php endif; ?>
                             </select>
                         </div>
-                        <div class="col-12">
+                        <div class="col-md-8">
                             <label class="form-label fw-semibold">Document Title <span class="text-danger">*</span></label>
                             <input type="text" name="title" class="form-control" placeholder="Enter document title" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label fw-semibold">Department / Group</label>
-                            <input type="text" name="department" class="form-control" placeholder="e.g. Network Engineering, Legal, Operations">
+                            <input type="text" name="department" class="form-control" placeholder="e.g. Operations, Legal">
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Description / Executive Summary</label>
                             <textarea name="description" class="form-control" rows="2" placeholder="Brief summary of document purpose..."></textarea>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Full Document Content</label>
-                            <textarea name="content" class="form-control" rows="6" placeholder="Document body content..."></textarea>
+                    </div>
+
+                    <div class="mb-2 d-flex justify-content-between align-items-center">
+                        <label class="form-label fw-semibold mb-0">Full Document Content (Leave empty to load default type template automatically)</label>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                Insert Canned Paragraph
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <?php foreach ($canned as $ckey => $cval): ?>
+                                    <li><a class="dropdown-item small" href="#" onclick="insertCannedText(<?= json_encode($cval) ?>); return false;"><?= htmlspecialchars(ucwords(str_replace('_', ' ', $ckey))) ?></a></li>
+                                <?php endforeach; ?>
+                            </ul>
                         </div>
                     </div>
+
+                    <div id="createQuillEditor" style="min-height: 300px; background:#fff;"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i> Save Document</button>
+                    <button type="submit" class="btn btn-primary" onclick="syncCreateQuill()"><i class="fa-solid fa-floppy-disk me-1"></i> Save Document</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    let createQuill;
+    document.addEventListener('DOMContentLoaded', function() {
+        createQuill = new Quill('#createQuillEditor', {
+            theme: 'snow',
+            placeholder: 'Type or paste document content here... (Will use default template if left empty)',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, 4, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image'],
+                    ['clean']
+                ]
+            }
+        });
+    });
+
+    function syncCreateQuill() {
+        document.getElementById('createContentInput').value = createQuill.root.innerHTML;
+    }
+
+    function insertCannedText(text) {
+        let range = createQuill.getSelection(true);
+        createQuill.insertText(range.index, text);
+    }
+</script>

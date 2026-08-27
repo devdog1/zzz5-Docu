@@ -49,11 +49,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'add_chain_of_custody') {
             $doc_id = (int)$_POST['document_id'];
 
-            // Handle file upload and calculate SHA-256 hash if attached
+            // Handle file upload persistently and calculate SHA-256 hash if attached
             $checksum = '';
-            if (!empty($_FILES['evidence_file']['tmp_name'])) {
+            if (!empty($_FILES['evidence_file']['tmp_name']) && is_uploaded_file($_FILES['evidence_file']['tmp_name'])) {
                 $file_tmp = $_FILES['evidence_file']['tmp_name'];
+                $file_name = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($_FILES['evidence_file']['name']));
                 $checksum = hash_file('sha256', $file_tmp);
+
+                $upload_dir = APP_ROOT . 'uploads/doc_evidence';
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0755, true);
+                }
+                $target_path = $upload_dir . '/' . time() . '_' . $file_name;
+                move_uploaded_file($file_tmp, $target_path);
+
+                // Record attachment record
+                $pdb = doc_get_pdb();
+                $tb_att = $pdb->getTableName('document_attachments');
+                $pdb->query("
+                    INSERT INTO {$tb_att} (document_id, file_name, file_path, file_size, mime_type, sha256_hash, uploaded_by_user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ", [(int)$doc_id, $file_name, $target_path, (int)$_FILES['evidence_file']['size'], $_FILES['evidence_file']['type'] ?? '', $checksum, (int)($_SESSION['user_id'] ?? 1)]);
             } elseif (!empty($_POST['file_checksum'])) {
                 $checksum = $_POST['file_checksum'];
             }
@@ -63,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['action'] = $_POST['custody_action'];
             }
             doc_add_chain_of_custody($doc_id, $_POST);
-            set_flash_message('success', 'Chain of Custody record logged (SHA-256 Hash verified).');
+            set_flash_message('success', 'Chain of Custody record logged and evidence saved persistently (SHA-256 Hash verified).');
             redirect(url_for('doc_manager_lawful') . '&id=' . $doc_id);
         }
     } catch (Exception $e) {

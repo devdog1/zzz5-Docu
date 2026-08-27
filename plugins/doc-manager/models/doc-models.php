@@ -49,7 +49,6 @@ function doc_can_access_lawful_requests() {
     if (!isset($_SESSION['user_id'])) {
         return false;
     }
-    // Check explicit user permissions directly from session, strictly ignoring global admin role inheritance
     $perms = $_SESSION['permissions'] ?? [];
     if (is_array($perms)) {
         if (isset($perms['legal_request.access']) || isset($perms['doc_manager_legal_request_access']) || isset($perms['doc_manager_manage_lawful_requests'])) {
@@ -108,12 +107,41 @@ function doc_can_user_view_document($doc) {
  * ========================================================= */
 
 function doc_send_notification($recipient_user_id, $subject, $message, $doc_id = null) {
-    // Log notification event in audit trail
     doc_audit_log('NOTIFICATION_SENT', 'document', $doc_id, 'SUCCESS', [
         'recipient_user_id' => $recipient_user_id,
         'subject' => $subject,
         'message' => $message
     ]);
+}
+
+/* =========================================================
+ * TEMPLATE EDITOR & CANNED TEXT ENGINE
+ * ========================================================= */
+
+function doc_render_template($template_html, $variables = []) {
+    $logo_url = get_setting('doc_manager_company_logo_url', '');
+    $logo_html = !empty($logo_url) ? '<img src="' . htmlspecialchars($logo_url) . '" alt="Company Logo" style="max-height:65px; margin-bottom:15px;">' : '<div style="background:#0d6efd; color:#fff; padding:10px 15px; font-weight:bold; display:inline-block; border-radius:4px; margin-bottom:15px;">ENTERPRISE PORTAL LOGO</div>';
+
+    $placeholders = [
+        '{DOCUMENT_NUMBER}' => $variables['document_number'] ?? 'DOC-2026-000000',
+        '{TITLE}' => $variables['title'] ?? 'Document Title',
+        '{CLASSIFICATION}' => $variables['classification'] ?? 'Internal',
+        '{DEPARTMENT}' => $variables['department'] ?? 'Operations',
+        '{DATE}' => $variables['date'] ?? date('F d, Y'),
+        '{OWNER}' => $variables['owner'] ?? (current_user()['name'] ?? 'System User'),
+        '{ORGANIZATION_LOGO}' => $logo_html
+    ];
+
+    return str_replace(array_keys($placeholders), array_values($placeholders), $template_html);
+}
+
+function doc_get_canned_paragraphs() {
+    return [
+        'confidentiality_notice' => 'NOTICE OF CONFIDENTIALITY: The information contained in this document is strictly confidential and intended solely for the use of authorized personnel. Unauthorized distribution, copying, or disclosure is strictly prohibited under organizational security policy.',
+        'incident_disclaimer' => 'INCIDENT ANALYSIS DISCLAIMER: This Reason for Outage (RFO) contains preliminary technical findings subject to ongoing forensic verification by Network Engineering and Security Operations.',
+        'legal_hold_warning' => 'LITIGATION PRESERVATION DIRECTIVE: All records, attachments, and metadata associated with this legal hold must be preserved in their original state. Automatic purging, routine destruction, and record modifications are strictly suspended.',
+        'compliance_statement' => 'REGULATORY COMPLIANCE STATEMENT: This governed record has been created, versioned, and audited in full compliance with ISO/IEC governance, statutory retention periods, and enterprise information security standards.'
+    ];
 }
 
 /* =========================================================
@@ -141,6 +169,16 @@ function doc_get_type($id) {
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+function doc_update_type_template($id, $template_html, $numbering_format, $default_classification, $retention_years) {
+    $pdb = doc_get_pdb();
+    $tb = $pdb->getTableName('document_types');
+    $pdb->query("
+        UPDATE {$tb}
+        SET template = ?, numbering_format = ?, default_classification = ?, retention_period_years = ?
+        WHERE id = ?
+    ", [$template_html, $numbering_format, $default_classification, (int)$retention_years, (int)$id]);
+}
+
 function doc_generate_number($type_id) {
     $type = doc_get_type($type_id);
     if (!$type) {
@@ -150,7 +188,6 @@ function doc_generate_number($type_id) {
     $pdb = doc_get_pdb();
     $tb = $pdb->getTableName('document_types');
 
-    // Increment counter atomically
     $new_counter = ((int)$type['current_counter']) + 1;
     $pdb->query("UPDATE {$tb} SET current_counter = ? WHERE id = ?", [$new_counter, (int)$type_id]);
 
@@ -178,6 +215,8 @@ function doc_seed_default_types() {
     $pdb = doc_get_pdb();
     $tb = $pdb->getTableName('document_types');
 
+    $canned = doc_get_canned_paragraphs();
+
     $defaults = [
         [
             'name' => 'Reason For Outage / Incident Report',
@@ -186,7 +225,8 @@ function doc_seed_default_types() {
             'default_classification' => 'Internal',
             'numbering_format' => 'RFO-{YYYY}-{NUMBER:6}',
             'workflow_steps' => json_encode(['Author', 'Technical Reviewer', 'Manager', 'Approved']),
-            'retention_period_years' => 7
+            'retention_period_years' => 7,
+            'template' => "{ORGANIZATION_LOGO}\n<h2>Reason For Outage Report — {DOCUMENT_NUMBER}</h2>\n<p><strong>Incident Title:</strong> {TITLE}</p>\n<p><strong>Department:</strong> {DEPARTMENT} | <strong>Owner:</strong> {OWNER} | <strong>Date:</strong> {DATE}</p>\n<p><strong>Security Classification:</strong> {CLASSIFICATION}</p>\n<hr>\n<h3>1. Executive Incident Summary</h3>\n<p>Enter high-level description of outage event and business impact...</p>\n<h3>2. Root Cause Analysis</h3>\n<p>Detailed technical cause and triggering factors...</p>\n<h3>3. Resolution & Restoration Actions</h3>\n<p>Steps executed to restore service and verify stability...</p>\n<hr>\n<p><em>" . $canned['incident_disclaimer'] . "</em></p>"
         ],
         [
             'name' => 'Post-Mortem Report',
@@ -195,7 +235,8 @@ function doc_seed_default_types() {
             'default_classification' => 'Internal',
             'numbering_format' => 'PM-{YYYY}-{NUMBER:6}',
             'workflow_steps' => json_encode(['Author', 'Technical Reviewer', 'Manager', 'Director', 'Final']),
-            'retention_period_years' => 7
+            'retention_period_years' => 7,
+            'template' => "{ORGANIZATION_LOGO}\n<h2>Post-Mortem Review — {DOCUMENT_NUMBER}</h2>\n<p><strong>Review Subject:</strong> {TITLE}</p>\n<p><strong>Lead Investigator:</strong> {OWNER} | <strong>Department:</strong> {DEPARTMENT} | <strong>Date:</strong> {DATE}</p>\n<p><strong>Classification:</strong> {CLASSIFICATION}</p>\n<hr>\n<h3>Executive Summary</h3>\n<p>Summary of technical findings and lessons learned...</p>\n<h3>Technical & Business Impact</h3>\n<p>Systems affected and user impact metrics...</p>\n<h3>What Went Well / What Did Not Go Well</h3>\n<p>Response evaluation...</p>\n<hr>\n<p><em>" . $canned['compliance_statement'] . "</em></p>"
         ],
         [
             'name' => 'Lawful Work Order',
@@ -204,7 +245,8 @@ function doc_seed_default_types() {
             'default_classification' => 'Restricted',
             'numbering_format' => 'LWO-{YYYY}-{NUMBER:6}',
             'workflow_steps' => json_encode(['Authorized Request Handler', 'Designated Authority', 'Execution', 'Verification', 'Closed']),
-            'retention_period_years' => 10
+            'retention_period_years' => 10,
+            'template' => "{ORGANIZATION_LOGO}\n<h2>Statutory Lawful Request Record — {DOCUMENT_NUMBER}</h2>\n<p><strong>Request Order Title:</strong> {TITLE}</p>\n<p><strong>Date Received:</strong> {DATE} | <strong>Assigned Handler:</strong> {OWNER}</p>\n<p><strong>Classification:</strong> RESTRICTED AUTHORIZED ACCESS ONLY</p>\n<hr>\n<h3>Scope of Statutory Demand</h3>\n<p>Enter court file numbers, jurisdiction, and legal authority cited...</p>\n<h3>Evidence & Chain of Custody Summary</h3>\n<p>Record of evidence transfers and SHA-256 file checksums...</p>\n<hr>\n<p><em>" . $canned['confidentiality_notice'] . "</em></p>"
         ],
         [
             'name' => 'Legal Hold Directive',
@@ -213,7 +255,8 @@ function doc_seed_default_types() {
             'default_classification' => 'Restricted',
             'numbering_format' => 'LH-{YYYY}-{NUMBER:6}',
             'workflow_steps' => json_encode(['Draft', 'Approved', 'Active', 'Released']),
-            'retention_period_years' => 10
+            'retention_period_years' => 10,
+            'template' => "{ORGANIZATION_LOGO}\n<h2>Legal Preservation Directive — {DOCUMENT_NUMBER}</h2>\n<p><strong>Directive Title:</strong> {TITLE}</p>\n<p><strong>Issued By:</strong> {OWNER} | <strong>Effective Date:</strong> {DATE}</p>\n<hr>\n<p><strong>" . $canned['legal_hold_warning'] . "</strong></p>\n<h3>Scope & Affected Custodians</h3>\n<p>List custodians, systems, and date ranges subject to hold...</p>"
         ],
         [
             'name' => 'Security Investigation',
@@ -222,7 +265,8 @@ function doc_seed_default_types() {
             'default_classification' => 'Restricted',
             'numbering_format' => 'SEC-{YYYY}-{NUMBER:6}',
             'workflow_steps' => json_encode(['Draft', 'Under Review', 'Approved', 'Closed']),
-            'retention_period_years' => 7
+            'retention_period_years' => 7,
+            'template' => "{ORGANIZATION_LOGO}\n<h2>Security Investigation Report — {DOCUMENT_NUMBER}</h2>\n<p><strong>Investigation Subject:</strong> {TITLE}</p>\n<p><strong>Lead Investigator:</strong> {OWNER} | <strong>Date:</strong> {DATE}</p>\n<hr>\n<h3>Forensic Findings</h3>\n<p>Detailed analysis of security events and vulnerability vectors...</p>\n<p><em>" . $canned['confidentiality_notice'] . "</em></p>"
         ],
         [
             'name' => 'Policy / Standard Operating Procedure',
@@ -231,15 +275,16 @@ function doc_seed_default_types() {
             'default_classification' => 'Internal',
             'numbering_format' => 'POL-{YYYY}-{NUMBER:6}',
             'workflow_steps' => json_encode(['Draft', 'Review', 'Approval', 'Published']),
-            'retention_period_years' => 10
+            'retention_period_years' => 10,
+            'template' => "{ORGANIZATION_LOGO}\n<h2>Standard Operating Procedure — {DOCUMENT_NUMBER}</h2>\n<p><strong>SOP Title:</strong> {TITLE}</p>\n<p><strong>Department:</strong> {DEPARTMENT} | <strong>Effective Date:</strong> {DATE}</p>\n<hr>\n<h3>1. Objective & Scope</h3>\n<p>Define operational purpose and applicable teams...</p>\n<h3>2. Standard Procedure Steps</h3>\n<p>Step-by-step operational instructions...</p>\n<hr>\n<p><em>" . $canned['compliance_statement'] . "</em></p>"
         ]
     ];
 
     foreach ($defaults as $d) {
         $pdb->query("
-            INSERT INTO {$tb} (name, code, description, default_classification, numbering_format, workflow_steps, retention_period_years)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ", [$d['name'], $d['code'], $d['description'], $d['default_classification'], $d['numbering_format'], $d['workflow_steps'], $d['retention_period_years']]);
+            INSERT INTO {$tb} (name, code, description, default_classification, numbering_format, workflow_steps, retention_period_years, template)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ", [$d['name'], $d['code'], $d['description'], $d['default_classification'], $d['numbering_format'], $d['workflow_steps'], $d['retention_period_years'], $d['template']]);
     }
 }
 
@@ -295,7 +340,20 @@ function doc_create_document($data) {
     $desc = $data['description'] ?? '';
     $classification = $data['classification'] ?? ($type['default_classification'] ?? 'Internal');
     $department = $data['department'] ?? '';
+
+    // Render content from template if not provided explicitly
     $content = $data['content'] ?? '';
+    if (empty(trim($content)) && $type && !empty($type['template'])) {
+        $content = doc_render_template($type['template'], [
+            'document_number' => $doc_num,
+            'title' => $title,
+            'classification' => $classification,
+            'department' => $department,
+            'date' => date('F d, Y'),
+            'owner' => current_user()['name'] ?? 'System User'
+        ]);
+    }
+
     $metadata = is_array($data['metadata'] ?? null) ? json_encode($data['metadata']) : ($data['metadata'] ?? '{}');
     $status = $data['status'] ?? 'Draft';
     $version = '0.1';
@@ -352,7 +410,6 @@ function doc_update_document($doc_id, $data, $change_reason = 'Updated document 
     $metadata = is_array($data['metadata'] ?? null) ? json_encode($data['metadata']) : ($data['metadata'] ?? $doc['metadata']);
     $status = $data['status'] ?? $doc['status'];
 
-    // Track changed fields with previous and new values
     $changed = [];
     if ($title !== $doc['title']) $changed[] = "title: '{$doc['title']}' -> '{$title}'";
     if ($desc !== $doc['description']) $changed[] = "description modified";
@@ -368,7 +425,6 @@ function doc_update_document($doc_id, $data, $change_reason = 'Updated document 
         WHERE id = ?
     ", [$title, $desc, $classification, $new_version, $status, $department, $metadata, $content, (int)$doc_id]);
 
-    // Store new version (never overwrite historical versions)
     $pdb->query("
         INSERT INTO {$tb_ver} (document_id, version, user_id, title, content, metadata, fields_changed, change_reason)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -403,9 +459,6 @@ function doc_get_versions($doc_id) {
     return $pdb->query("SELECT v.*, u.name as user_name, u.email as user_email FROM {$tb} v LEFT JOIN users u ON v.user_id = u.id WHERE v.document_id = ? ORDER BY v.id DESC", [(int)$doc_id])->fetchAll(PDO::FETCH_ASSOC);
 }
 
-/**
- * Prevent hard deletes. Log deletion attempt and check legal holds.
- */
 function doc_attempt_delete_document($doc_id) {
     $doc = doc_get_document($doc_id);
     if (!$doc) return false;
@@ -417,7 +470,6 @@ function doc_attempt_delete_document($doc_id) {
 
     doc_audit_log('DOCUMENT_DELETE_ATTEMPTED', 'document', $doc_id, 'PROHIBITED', ['reason' => 'No hard delete policy enforced']);
 
-    // Soft disposition update
     $pdb = doc_get_pdb();
     $tb = $pdb->getTableName('documents');
     $pdb->query("UPDATE {$tb} SET disposition_status = 'Pending Disposition', status = 'Archived' WHERE id = ?", [(int)$doc_id]);
@@ -734,7 +786,6 @@ function doc_release_legal_hold($lh_id, $release_auth = '') {
     $today = date('Y-m-d');
     $pdb->query("UPDATE {$tb_lh} SET status = 'Released', release_authorization = ?, release_date = ? WHERE id = ?", [$release_auth, $today, (int)$lh_id]);
 
-    // Check remaining active legal holds for documents
     $docs = $pdb->query("SELECT document_id FROM {$tb_lhd} WHERE legal_hold_id = ?", [(int)$lh_id])->fetchAll(PDO::FETCH_COLUMN);
     foreach ($docs as $d_id) {
         $other_active = $pdb->query("
@@ -788,7 +839,6 @@ function doc_record_approval_decision($doc_id, $step_id, $decision, $comments = 
             WHERE id = ? AND document_id = ?
         ", [$user_id, $comments, $now, (int)$step_id, (int)$doc_id]);
 
-        // Advance to next step or set document to Approved
         $current = $pdb->query("SELECT step_number FROM {$tb} WHERE id = ?", [(int)$step_id])->fetchColumn();
         $next_step = $pdb->query("SELECT id FROM {$tb} WHERE document_id = ? AND step_number = ?", [(int)$doc_id, ((int)$current + 1)])->fetch();
 
@@ -796,7 +846,6 @@ function doc_record_approval_decision($doc_id, $step_id, $decision, $comments = 
             $pdb->query("UPDATE {$tb} SET status = 'Pending' WHERE id = ?", [(int)$next_step['id']]);
             doc_send_notification(null, 'Workflow Advanced', "Document #{$doc_id} advanced to step " . ((int)$current + 1), $doc_id);
         } else {
-            // All steps approved
             doc_update_document($doc_id, ['status' => 'Approved'], 'All workflow approval steps completed', true);
             doc_send_notification(null, 'Document Approved', "Document #{$doc_id} has been fully approved.", $doc_id);
         }
@@ -908,7 +957,6 @@ function doc_search_documents($criteria = []) {
 
     $results = $pdb->query($sql, $params)->fetchAll(PDO::FETCH_ASSOC);
 
-    // Enforce permission filtering: "A user must never learn that a restricted document exists if they do not have permission to view it."
     $filtered = [];
     foreach ($results as $doc) {
         if (doc_can_user_view_document($doc)) {

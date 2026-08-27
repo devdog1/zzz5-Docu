@@ -16,12 +16,12 @@ if (!doc_can_user_view_document($doc)) {
     die("Access Denied.");
 }
 
-// Log print / PDF export audit event
 doc_audit_log('DOCUMENT_EXPORT_PDF', 'document', $doc_id, 'SUCCESS', ['document_number' => $doc['document_number']]);
 
 $approvals = doc_get_approvals($doc_id);
 $site_name = get_setting('site_name', 'ENTERPRISE PORTAL');
 $owner = current_user()['name'] ?? 'Document Owner';
+$company_logo_url = get_setting('doc_manager_company_logo_url', '');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,6 +38,7 @@ $owner = current_user()['name'] ?? 'Document Owner';
         .classification-header.INTERNAL { background-color: #0dcaf0; color: #000; }
         .classification-header.PUBLIC { background-color: #198754; color: #fff; }
         .pdf-footer { border-top: 1px solid #ddd; padding-top: 15px; margin-top: 40px; font-size: 0.85rem; color: #666; text-align: center; }
+        .rich-content img { max-width: 100%; height: auto; }
         @media print {
             .no-print { display: none !important; }
             @page {
@@ -59,7 +60,11 @@ $owner = current_user()['name'] ?? 'Document Owner';
 
     <div class="pdf-header d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
-            <div class="bg-primary text-white rounded p-2 me-3 fw-bold">ORGANIZATION LOGO</div>
+            <?php if (!empty($company_logo_url)): ?>
+                <img src="<?= htmlspecialchars($company_logo_url) ?>" alt="Logo" style="max-height:65px;" class="me-3">
+            <?php else: ?>
+                <div class="bg-primary text-white rounded p-2 me-3 fw-bold">ORGANIZATION LOGO</div>
+            <?php endif; ?>
             <div>
                 <h2 class="fw-bold mb-0 text-primary"><?= htmlspecialchars($site_name) ?></h2>
                 <small class="text-muted">Official Governed Document Record</small>
@@ -89,8 +94,16 @@ $owner = current_user()['name'] ?? 'Document Owner';
 
     <div class="mb-5">
         <h5 class="fw-bold text-dark mb-3">Document Content</h5>
-        <div class="p-3 bg-light rounded border">
-            <?= nl2br(htmlspecialchars($doc['content'] ?: ($doc['description'] ?: 'No body content recorded.'))) ?>
+        <div class="p-4 bg-light rounded border rich-content">
+            <?php
+            $raw_content = $doc['content'] ?: ($doc['description'] ?: '<p>No body content recorded.</p>');
+            // Render HTML directly if HTML tags present, else line breaks
+            if (strip_tags($raw_content) !== $raw_content) {
+                echo $raw_content;
+            } else {
+                echo nl2br(htmlspecialchars($raw_content));
+            }
+            ?>
         </div>
     </div>
 
@@ -124,7 +137,7 @@ $owner = current_user()['name'] ?? 'Document Owner';
 
     <div class="pdf-footer">
         <p class="mb-1"><strong><?= htmlspecialchars($doc['classification']) ?></strong> — <?= htmlspecialchars($site_name) ?> Document Management System</p>
-        <p class="mb-0">Document Verification Identifier: <code><?= htmlspecialchars($doc['verification_code'] ?? 'N/A') ?></code> | Page <span class="page-number">1</span></p>
+        <p class="mb-0">Document Verification Identifier: <code><?= htmlspecialchars($doc['verification_code'] ?? 'N/A') ?></code></p>
     </div>
 </body>
 </html>
