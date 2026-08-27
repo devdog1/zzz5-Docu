@@ -243,6 +243,33 @@ function doc_seed_default_types() {
     }
 }
 
+function doc_seed_demo_data() {
+    doc_seed_default_types();
+
+    $rfo_type_id = doc_get_type_id_by_code('RFO');
+    if ($rfo_type_id) {
+        $doc_id = doc_create_document([
+            'document_type_id' => $rfo_type_id,
+            'title' => 'Sample RFO: Core Backbone BGP Flap',
+            'description' => 'Automated demo incident report for backbone fiber disruption.',
+            'classification' => 'Internal',
+            'department' => 'Network Operations',
+            'content' => 'Root cause determined to be physical fiber cut during highway construction.',
+            'status' => 'Submitted'
+        ]);
+
+        doc_save_rfo_details($doc_id, [
+            'incident_number' => 'INC-2026-9081',
+            'service_affected' => 'Core IP Backhaul',
+            'incident_severity' => 'SEV-1',
+            'root_cause' => 'Physical fiber line severed by third-party contractor.',
+            'resolution' => 'Traffic rerouted via redundant MPLS path.'
+        ]);
+
+        doc_add_rfo_timeline_entry($doc_id, date('Y-m-d H:i:s', strtotime('-2 hours')), 'Alarms triggered in Zabbix', 'NOC Automation', 'Zabbix', 'BGP peer session down.');
+    }
+}
+
 /* =========================================================
  * DOCUMENT CRUD & VERSION CONTROL
  * ========================================================= */

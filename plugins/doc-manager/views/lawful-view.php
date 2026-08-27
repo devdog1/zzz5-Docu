@@ -59,6 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $_POST['file_checksum'] = $checksum;
+            if (!empty($_POST['custody_action'])) {
+                $_POST['action'] = $_POST['custody_action'];
+            }
             doc_add_chain_of_custody($doc_id, $_POST);
             set_flash_message('success', 'Chain of Custody record logged (SHA-256 Hash verified).');
             redirect(url_for('doc_manager_lawful') . '&id=' . $doc_id);
@@ -255,11 +258,11 @@ $custody_logs = $selected_doc ? doc_get_chain_of_custody($selected_doc['id']) : 
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Action Type</label>
-                        <select name="action" class="form-select">
-                            <option value="Received">Received Evidence</option>
-                            <option value="Transfer">Transfer / Disclosure</option>
-                            <option value="Hash Verification">SHA-256 Integrity Check</option>
-                            <option value="Archived">Archived to Vault</option>
+                        <select name="custody_action" class="form-select">
+                            <option value="Received Evidence">Received Evidence</option>
+                            <option value="Transfer / Disclosure">Transfer / Disclosure</option>
+                            <option value="SHA-256 Integrity Check">SHA-256 Integrity Check</option>
+                            <option value="Archived to Vault">Archived to Vault</option>
                         </select>
                     </div>
                     <div class="row g-2 mb-3">

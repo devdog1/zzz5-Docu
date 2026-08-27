@@ -30,6 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             set_flash_message('success', 'Document type added.');
             redirect(url_for('doc_manager_admin'));
+        } elseif ($action === 'seed_demo') {
+            doc_seed_demo_data();
+            set_flash_message('success', 'Sample demo incident report generated for testing.');
+            redirect(url_for('doc_manager_admin'));
         }
     } catch (Exception $e) {
         set_flash_message('danger', 'Error: ' . $e->getMessage());
@@ -46,6 +50,11 @@ $types = doc_get_all_types();
             <p class="text-muted small mb-0">Configure document types, auto-numbering formats, default classifications & retention rules.</p>
         </div>
         <div>
+            <form method="POST" action="<?= url_for('doc_manager_admin') ?>" class="d-inline">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="seed_demo">
+                <button type="submit" class="btn btn-outline-info me-2"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> Seed Sample Demo Record</button>
+            </form>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTypeModal">
                 <i class="fa-solid fa-plus me-1"></i> Add Document Type
             </button>

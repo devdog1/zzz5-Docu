@@ -29,6 +29,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Handle CSV Export
+if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+    $criteria = [
+        'query' => $_GET['q'] ?? '',
+        'type_id' => $_GET['type_id'] ?? '',
+        'classification' => $_GET['classification'] ?? '',
+        'status' => $_GET['status'] ?? '',
+        'department' => $_GET['department'] ?? ''
+    ];
+    $docs = doc_search_documents($criteria);
+
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="documents-export-' . date('Y-m-d') . '.csv"');
+
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['Document Number', 'Title', 'Type', 'Classification', 'Version', 'Status', 'Department', 'Created At']);
+
+    foreach ($docs as $d) {
+        fputcsv($out, [
+            $d['document_number'],
+            $d['title'],
+            $d['document_type_code'] ?? 'DOC',
+            $d['classification'],
+            $d['current_version'],
+            $d['status'],
+            $d['department'] ?? '',
+            $d['created_at']
+        ]);
+    }
+    fclose($out);
+    exit;
+}
+
 // Advanced Search Filtering
 $criteria = [
     'query' => $_GET['q'] ?? '',
@@ -46,9 +79,12 @@ $types = doc_get_all_types();
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-folder-open me-2"></i>Document Repository</h2>
-            <p class="text-muted small mb-0">Search, filter, and manage enterprise governed documents.</p>
+            <p class="text-muted small mb-0">Search, filter, export, and manage enterprise governed documents.</p>
         </div>
         <div>
+            <a href="<?= url_for('doc_manager_documents') ?>&export=csv&<?= http_build_query($_GET) ?>" class="btn btn-outline-success me-2">
+                <i class="fa-solid fa-file-csv me-1"></i> Export CSV
+            </a>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createDocModal">
                 <i class="fa-solid fa-plus me-1"></i> Create Document
             </button>
