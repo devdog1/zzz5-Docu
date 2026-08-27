@@ -136,24 +136,26 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
 
         <hr class="my-4">
 
-        <div class="mb-4">
-            <h5 class="fw-bold text-dark mb-3">Document Content</h5>
-            <div class="p-4 bg-light rounded border rich-content">
-                <?php
-                $raw_content = $doc['content'] ?: ($doc['description'] ?: '<p>No body content recorded.</p>');
-                if (strip_tags($raw_content) !== $raw_content) {
-                    echo $raw_content;
-                } else {
-                    echo nl2br(htmlspecialchars($raw_content));
-                }
-                ?>
+        <!-- Show Document Content only if NOT an RFO report -->
+        <?php if (!$rfo_details): ?>
+            <div class="mb-4">
+                <h5 class="fw-bold text-dark mb-3">Document Content</h5>
+                <div class="p-4 bg-light rounded border rich-content">
+                    <?php
+                    $raw_content = $doc['content'] ?: ($doc['description'] ?: '<p>No body content recorded.</p>');
+                    if (strip_tags($raw_content) !== $raw_content) {
+                        echo $raw_content;
+                    } else {
+                        echo nl2br(htmlspecialchars($raw_content));
+                    }
+                    ?>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
 
         <!-- RFO / Incident Details Section -->
         <?php if ($rfo_details): ?>
-            <div class="html2pdf__page-break"></div>
-            <div class="mb-4 pt-3">
+            <div class="mb-4 pt-1">
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-2 border-danger">
                     <h4 class="fw-bold text-danger mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i>Reason For Outage (RFO) Incident Analysis</h4>
                     <span class="badge bg-<?= $rfo_details['incident_severity'] === 'SEV-1' ? 'danger' : 'warning text-dark' ?> fs-6">
