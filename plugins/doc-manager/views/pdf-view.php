@@ -19,7 +19,6 @@ if (!doc_can_user_view_document($doc)) {
 doc_audit_log('DOCUMENT_EXPORT_PDF', 'document', $doc_id, 'SUCCESS', ['document_number' => $doc['document_number']]);
 
 $approvals = doc_get_approvals($doc_id);
-$site_name = get_setting('site_name', 'ENTERPRISE PORTAL');
 $owner = current_user()['name'] ?? 'Document Owner';
 $company_logo_url = doc_get_setting('company_logo_url', '');
 $watermark_enabled = doc_get_setting('pdf_watermark_enabled', '1');
@@ -39,7 +38,7 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #fff; color: #333; position: relative; }
-        .pdf-header { border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 25px; position: relative; z-index: 2; }
+        .pdf-header { border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 25px; position: relative; z-index: 2; height: 85px; }
         .classification-header { text-align: center; font-weight: bold; padding: 6px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; position: relative; z-index: 2; }
         .classification-header.RESTRICTED { background-color: #dc3545; color: #fff; }
         .classification-header.CONFIDENTIAL { background-color: #ffc107; color: #000; }
@@ -109,16 +108,12 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
         </div>
 
         <div class="pdf-header d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center" style="height: 100%;">
                 <?php if (!empty($company_logo_url)): ?>
-                    <img src="<?= htmlspecialchars($company_logo_url) ?>" alt="Logo" style="max-height:65px;" class="me-3">
+                    <img src="<?= htmlspecialchars($company_logo_url) ?>" alt="Logo" style="height: 100%; max-height: 80px; width: auto; object-fit: contain;" class="mx-auto">
                 <?php else: ?>
-                    <div class="bg-primary text-white rounded p-2 me-3 fw-bold">ORGANIZATION LOGO</div>
+                    <div class="bg-primary text-white rounded px-4 py-2 fw-bold mx-auto text-center d-flex align-items-center justify-content-center" style="height: 100%;">ORGANIZATION LOGO</div>
                 <?php endif; ?>
-                <div>
-                    <h2 class="fw-bold mb-0 text-primary"><?= htmlspecialchars($site_name) ?></h2>
-                    <small class="text-muted">Official Governed Document Record</small>
-                </div>
             </div>
             <div class="text-end d-flex align-items-center">
                 <div class="me-3 text-end">
