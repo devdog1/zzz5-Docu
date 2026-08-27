@@ -2,7 +2,7 @@
 // doc-postmortem-models.php - Post-Mortem Reviews & Trackable Action Item Management
 
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/doc-core-models.php';

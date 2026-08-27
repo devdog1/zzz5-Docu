@@ -2,7 +2,7 @@
 // doc-lawful-models.php - Lawful Request Orders, Court Warrants & SHA-256 Chain of Custody
 
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/doc-core-models.php';

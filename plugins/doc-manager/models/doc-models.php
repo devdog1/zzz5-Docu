@@ -2,7 +2,7 @@
 // doc-models.php - Master Loader for Document Management Modular Domain Models
 
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 // Load Domain Model Modules

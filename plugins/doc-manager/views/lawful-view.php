@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/../models/doc-models.php';
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $file_name = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', basename($_FILES['evidence_file']['name']));
                 $checksum = hash_file('sha256', $file_tmp);
 
-                $upload_dir = APP_ROOT . 'uploads/doc_evidence';
+                $upload_dir = APP_ROOT . '/uploads/doc_evidence';
                 if (!is_dir($upload_dir)) {
                     mkdir($upload_dir, 0755, true);
                 }

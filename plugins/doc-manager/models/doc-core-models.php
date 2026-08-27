@@ -2,10 +2,10 @@
 // doc-core-models.php - Core Database Wrapper, Verbose Settings, Audit Logging & Security Permissions
 
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
-require_once APP_ROOT . 'PluginDatabase.php';
+require_once APP_ROOT . '/PluginDatabase.php';
 
 function doc_get_pdb() {
     static $pdb = null;

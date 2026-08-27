@@ -2,7 +2,7 @@
 // doc-tasks.php - Background Scheduled Tasks for Document Management System
 
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/../models/doc-models.php';
@@ -53,7 +53,8 @@ function doc_task_deadline_alerts() {
     $tb_lwo = $pdb->getTableName('lawful_requests');
     $tb_act = $pdb->getTableName('post_mortem_actions');
     $today = date('Y-m-d');
-    $warning_date = date('Y-m-d', strtotime('+3 days'));
+    $lead_days = (int)doc_get_setting('deadline_alert_days', 3);
+    $warning_date = date('Y-m-d', strtotime("+{$lead_days} days"));
 
     // Check Lawful Requests
     $lwos = $pdb->query("
