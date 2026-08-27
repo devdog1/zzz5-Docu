@@ -35,11 +35,43 @@ function doc_initiate_approval_workflow($doc_id, $workflow_steps) {
 }
 
 /**
+ * Restarts an existing approval workflow for a document after changes have been requested or updated.
+ * Resets step 1 to 'Pending' and all subsequent steps to 'Scheduled'.
+ */
+function doc_restart_approval_workflow($doc_id) {
+    $pdb = doc_get_pdb();
+    $tb = $pdb->getTableName('document_approvals');
+
+    $steps = $pdb->query("SELECT * FROM {$tb} WHERE document_id = ? ORDER BY step_number ASC", [(int)$doc_id])->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($steps)) {
+        // If no steps exist yet, fall back to default template steps
+        $doc = doc_get_document($doc_id);
+        $type = doc_get_type($doc['document_type_id'] ?? 0);
+        $raw_steps = json_decode($type['workflow_steps'] ?? '[]', true);
+        if (empty($raw_steps)) {
+            $raw_steps = ['Author Sign-off', 'Technical Reviewer Sign-off', 'Manager Approval'];
+        }
+        doc_initiate_approval_workflow($doc_id, $raw_steps);
+        return;
+    }
+
+    foreach ($steps as $step) {
+        $status = ($step['step_number'] == 1) ? 'Pending' : 'Scheduled';
+        $pdb->query("
+            UPDATE {$tb}
+            SET status = ?, approver_user_id = NULL, comments = NULL, signature_hash = NULL, decided_at = NULL
+            WHERE id = ?
+        ", [$status, (int)$step['id']]);
+    }
+
+    $pdb->query("UPDATE " . $pdb->getTableName('documents') . " SET status = 'Under Review' WHERE id = ?", [(int)$doc_id]);
+    doc_audit_log('WORKFLOW_RESTARTED', 'document', $doc_id, 'SUCCESS', ['message' => 'Workflow sign-off restarted following document changes']);
+    doc_send_notification(null, 'Workflow Restarted', "Document #{$doc_id} authorization flow has been restarted for re-review.", $doc_id);
+}
+
+/**
  * Checks if current user is authorized to sign off on a specific workflow step.
- * Authorized if:
- * 1. User possesses admin/management privileges.
- * 2. User's ID is in the step's authorized_user_ids list.
- * 3. User possesses the step's required_role.
  */
 function doc_can_user_sign_off_step($step) {
     if (!isset($_SESSION['user_id'])) return false;

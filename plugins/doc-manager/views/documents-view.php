@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/../models/doc-models.php';
@@ -316,7 +316,10 @@ $canned = doc_get_canned_paragraphs();
     }
 
     function insertCannedText(text) {
-        let range = createQuill.getSelection(true);
-        createQuill.insertText(range.index, text);
+        if (!createQuill) return;
+        createQuill.focus();
+        let range = createQuill.getSelection();
+        let index = (range && range.index !== undefined) ? range.index : createQuill.getLength();
+        createQuill.insertText(index, text + "\n");
     }
 </script>

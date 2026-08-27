@@ -45,6 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             doc_initiate_approval_workflow($doc_id, $raw_steps);
             set_flash_message('success', 'Document authorization workflow initiated.');
             redirect(url_for('doc_manager_document_detail') . '&id=' . $doc_id);
+        } elseif ($action === 'restart_workflow') {
+            doc_restart_approval_workflow($doc_id);
+            set_flash_message('info', 'Authorization sign-off workflow has been restarted for re-review.');
+            redirect(url_for('doc_manager_document_detail') . '&id=' . $doc_id);
         } elseif ($action === 'approval_decision') {
             doc_record_approval_decision($doc_id, $_POST['step_id'], $_POST['decision'], $_POST['comments'] ?? '');
             set_flash_message('success', 'Authorization sign-off recorded.');
@@ -149,6 +153,7 @@ $canned = doc_get_canned_paragraphs();
                                     <option value="In Progress" <?= $doc['status'] === 'In Progress' ? 'selected' : '' ?>>In Progress</option>
                                     <option value="Submitted" <?= $doc['status'] === 'Submitted' ? 'selected' : '' ?>>Submitted</option>
                                     <option value="Under Review" <?= $doc['status'] === 'Under Review' ? 'selected' : '' ?>>Under Review</option>
+                                    <option value="Changes Requested" <?= $doc['status'] === 'Changes Requested' ? 'selected' : '' ?>>Changes Requested</option>
                                     <option value="Approved" <?= $doc['status'] === 'Approved' ? 'selected' : '' ?>>Approved</option>
                                     <option value="Published" <?= $doc['status'] === 'Published' ? 'selected' : '' ?>>Published</option>
                                     <option value="Archived" <?= $doc['status'] === 'Archived' ? 'selected' : '' ?>>Archived</option>
@@ -204,13 +209,23 @@ $canned = doc_get_canned_paragraphs();
             <div class="card shadow-sm mb-4 border-start border-4 border-success">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="fw-bold mb-0 text-success"><i class="fa-solid fa-file-signature me-2"></i>Multi-Authority Authorization Sign-off Flow</h5>
-                    <?php if (empty($approvals)): ?>
-                        <form method="POST" action="<?= url_for('doc_manager_document_detail') ?>&id=<?= $doc['id'] ?>">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="action" value="initiate_workflow">
-                            <button type="submit" class="btn btn-sm btn-success"><i class="fa-solid fa-play me-1"></i> Initiate Authorization Flow</button>
-                        </form>
-                    <?php endif; ?>
+                    <div>
+                        <?php if (empty($approvals)): ?>
+                            <form method="POST" action="<?= url_for('doc_manager_document_detail') ?>&id=<?= $doc['id'] ?>" class="d-inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="initiate_workflow">
+                                <button type="submit" class="btn btn-sm btn-success"><i class="fa-solid fa-play me-1"></i> Initiate Authorization Flow</button>
+                            </form>
+                        <?php else: ?>
+                            <form method="POST" action="<?= url_for('doc_manager_document_detail') ?>&id=<?= $doc['id'] ?>" class="d-inline">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="restart_workflow">
+                                <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Restart authorization workflow sign-off sequence for this document?');">
+                                    <i class="fa-solid fa-rotate-left me-1"></i> Restart Sign-off Flow
+                                </button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="card-body">
                     <?php if (empty($approvals)): ?>
@@ -226,8 +241,8 @@ $canned = doc_get_canned_paragraphs();
                                             <strong class="text-dark fs-6"><?= htmlspecialchars($app['step_name']) ?></strong>
                                         </div>
                                         <?php if (!empty($app['approver_name'])): ?>
-                                            <div class="small text-success">
-                                                <i class="fa-solid fa-circle-check me-1"></i> Signed off by <strong><?= htmlspecialchars($app['approver_name']) ?></strong>
+                                            <div class="small text-<?= $app['status'] === 'Approved' ? 'success' : ($app['status'] === 'Changes Requested' ? 'warning text-dark' : 'danger') ?>">
+                                                <i class="fa-solid fa-circle-check me-1"></i> Decided by <strong><?= htmlspecialchars($app['approver_name']) ?></strong>
                                                 on <?= date('M d, Y H:i', strtotime($app['decided_at'])) ?>
                                             </div>
                                         <?php endif; ?>
@@ -239,7 +254,7 @@ $canned = doc_get_canned_paragraphs();
                                         <?php endif; ?>
                                     </div>
                                     <div class="d-flex align-items-center">
-                                        <span class="badge bg-<?= $app['status'] === 'Approved' ? 'success' : ($app['status'] === 'Pending' ? 'warning text-dark' : 'secondary') ?> fs-6 px-3 py-2 me-3">
+                                        <span class="badge bg-<?= $app['status'] === 'Approved' ? 'success' : ($app['status'] === 'Pending' ? 'warning text-dark' : ($app['status'] === 'Changes Requested' ? 'warning text-dark' : 'danger')) ?> fs-6 px-3 py-2 me-3">
                                             <?= htmlspecialchars($app['status']) ?>
                                         </span>
 
@@ -472,7 +487,10 @@ $canned = doc_get_canned_paragraphs();
     }
 
     function insertEditCannedText(text) {
-        let range = editQuill.getSelection(true);
-        editQuill.insertText(range.index, text);
+        if (!editQuill) return;
+        editQuill.focus();
+        let range = editQuill.getSelection();
+        let index = (range && range.index !== undefined) ? range.index : editQuill.getLength();
+        editQuill.insertText(index, text + "\n");
     }
 </script>

@@ -28,13 +28,15 @@ $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
 
 $verify_url = url_for('doc_manager_document_detail') . '&id=' . $doc['id'] . '&v=' . urlencode($doc['verification_code'] ?? '');
 $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlencode($verify_url);
+$auto_download = isset($_GET['download']) && $_GET['download'] === '1';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PDF Export - <?= htmlspecialchars($doc['document_number']) ?></title>
+    <title>PDF - <?= htmlspecialchars($doc['document_number']) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #fff; color: #333; position: relative; }
         .pdf-header { border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 25px; position: relative; z-index: 2; }
@@ -79,11 +81,6 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . 
 
         @media print {
             .no-print { display: none !important; }
-            @page {
-                @bottom-right {
-                    content: "Page " counter(page) " of " counter(pages);
-                }
-            }
         }
     </style>
 </head>
@@ -97,11 +94,16 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . 
         </div>
     <?php endif; ?>
 
-    <div class="content-body">
-        <div class="no-print mb-4 text-end">
-            <button onclick="window.print();" class="btn btn-primary"><i class="fa-solid fa-print"></i> Print / Save as PDF</button>
-        </div>
+    <div class="no-print mb-4 text-end">
+        <button onclick="downloadPDF();" class="btn btn-danger fw-bold" id="downloadBtn">
+            <i class="fa-solid fa-file-pdf me-1"></i> Download PDF Document
+        </button>
+        <button onclick="window.print();" class="btn btn-outline-secondary ms-2">
+            <i class="fa-solid fa-print me-1"></i> Print View
+        </button>
+    </div>
 
+    <div class="content-body" id="pdfContent">
         <div class="classification-header <?= $classification_str ?>">
             <?= $classification_str ?> — AUTHORIZED ACCESS ONLY
         </div>
@@ -192,5 +194,39 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . 
             </div>
         </div>
     </div>
+
+    <script>
+        function downloadPDF() {
+            let btn = document.getElementById('downloadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Generating PDF...';
+
+            let element = document.getElementById('pdfContent');
+            let filename = '<?= htmlspecialchars($doc['document_number']) ?>.pdf';
+
+            let opt = {
+                margin:       [0.4, 0.4, 0.4, 0.4],
+                filename:     filename,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(function() {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-file-pdf me-1"></i> Download PDF Document';
+            }).catch(function(err) {
+                console.error("PDF generation error: ", err);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-file-pdf me-1"></i> Download PDF Document';
+            });
+        }
+
+        <?php if ($auto_download): ?>
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(downloadPDF, 500);
+            });
+        <?php endif; ?>
+    </script>
 </body>
 </html>

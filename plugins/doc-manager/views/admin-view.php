@@ -1,6 +1,6 @@
 <?php
 if (!defined('APP_ROOT')) {
-    define('APP_ROOT', __DIR__ . '/../../../');
+    define('APP_ROOT', dirname(__DIR__, 3));
 }
 
 require_once __DIR__ . '/../models/doc-models.php';
@@ -470,8 +470,11 @@ $audit_logs = $pdb->query("SELECT * FROM {$tb_audit} ORDER BY id DESC LIMIT 100"
         }
 
         function insertTag<?= $t['id'] ?>(tag) {
-            let range = quill<?= $t['id'] ?>.getSelection(true);
-            quill<?= $t['id'] ?>.insertText(range.index, tag);
+            if (!quill<?= $t['id'] ?>) return;
+            quill<?= $t['id'] ?>.focus();
+            let range = quill<?= $t['id'] ?>.getSelection();
+            let index = (range && range.index !== undefined) ? range.index : quill<?= $t['id'] ?>.getLength();
+            quill<?= $t['id'] ?>.insertText(index, tag);
         }
     </script>
 <?php endforeach; ?>
