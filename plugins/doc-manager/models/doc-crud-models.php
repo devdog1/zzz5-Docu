@@ -142,7 +142,7 @@ function doc_get_document_by_number($number) {
 function doc_get_versions($doc_id) {
     $pdb = doc_get_pdb();
     $tb = $pdb->getTableName('document_versions');
-    return $pdb->query("SELECT v.*, u.name as user_name, u.email as user_email FROM {$tb} v LEFT JOIN users u ON v.user_id = u.id WHERE v.document_id = ? ORDER BY v.id DESC", [(int)$doc_id])->fetchAll(PDO::FETCH_ASSOC);
+    return $pdb->query("SELECT v.*, COALESCE(NULLIF(u.display_name, ''), u.username) as user_name, u.email as user_email FROM {$tb} v LEFT JOIN users u ON v.user_id = u.id WHERE v.document_id = ? ORDER BY v.id DESC", [(int)$doc_id])->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function doc_attempt_delete_document($doc_id) {

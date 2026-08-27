@@ -68,5 +68,5 @@ function doc_record_approval_decision($doc_id, $step_id, $decision, $comments = 
 function doc_get_approvals($doc_id) {
     $pdb = doc_get_pdb();
     $tb = $pdb->getTableName('document_approvals');
-    return $pdb->query("SELECT a.*, u.name as approver_name, u.email as approver_email FROM {$tb} a LEFT JOIN users u ON a.approver_user_id = u.id WHERE a.document_id = ? ORDER BY a.step_number ASC", [(int)$doc_id])->fetchAll(PDO::FETCH_ASSOC);
+    return $pdb->query("SELECT a.*, COALESCE(NULLIF(u.display_name, ''), u.username) as approver_name, u.email as approver_email FROM {$tb} a LEFT JOIN users u ON a.approver_user_id = u.id WHERE a.document_id = ? ORDER BY a.step_number ASC", [(int)$doc_id])->fetchAll(PDO::FETCH_ASSOC);
 }
