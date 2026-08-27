@@ -33,6 +33,10 @@ if (($doc['document_type_code'] ?? '') === 'RFO' || stristr($doc['document_type_
     $rfo_timelines = doc_get_rfo_timelines($doc_id);
 }
 
+// Generate SVG background watermark URI for HTML canvas compatibility
+$svg_text = htmlspecialchars($classification_str, ENT_QUOTES);
+$svg_watermark = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><text x='50%' y='50%' fill='rgba(0,0,0,0.06)' font-size='22' font-weight='bold' font-family='sans-serif' text-anchor='middle' transform='rotate(-30, 150, 100)'>{$svg_text}</text></svg>";
+
 $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
 ?>
 <!DOCTYPE html>
@@ -45,7 +49,18 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
-        #pdfContent { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border: 1px solid #dee2e6; position: relative; }
+        #pdfContent {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border: 1px solid #dee2e6;
+            position: relative;
+            <?php if ($watermark_enabled === '1'): ?>
+            background-image: url("<?= $svg_watermark ?>");
+            background-repeat: repeat;
+            <?php endif; ?>
+        }
         .pdf-header { border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 25px; }
         .classification-header { text-align: center; font-weight: bold; padding: 8px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; border-radius: 4px; }
         .classification-header.RESTRICTED { background-color: #dc3545; color: #fff; }

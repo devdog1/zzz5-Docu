@@ -108,7 +108,12 @@ $timelines = $selected_doc ? doc_get_rfo_timelines($selected_doc['id']) : [];
                 <div class="card shadow-sm mb-4">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <h5 class="fw-bold mb-0 text-primary">RFO Details: <code><?= htmlspecialchars($selected_doc['document_number']) ?></code></h5>
-                        <a href="<?= url_for('doc_manager_document_detail') ?>&id=<?= $selected_doc['id'] ?>" class="btn btn-sm btn-outline-secondary">View Core Doc</a>
+                        <div>
+                            <a href="<?= url_for('doc_manager_pdf') ?>&id=<?= $selected_doc['id'] ?>" target="_blank" class="btn btn-sm btn-outline-danger me-2">
+                                <i class="fa-solid fa-file-pdf me-1"></i> Export RFO PDF
+                            </a>
+                            <a href="<?= url_for('doc_manager_document_detail') ?>&id=<?= $selected_doc['id'] ?>" class="btn btn-sm btn-outline-secondary">View Core Doc</a>
+                        </div>
                     </div>
                     <div class="card-body">
                         <form method="POST" action="<?= url_for('doc_manager_rfo') ?>&id=<?= $selected_doc['id'] ?>">
@@ -116,18 +121,32 @@ $timelines = $selected_doc ? doc_get_rfo_timelines($selected_doc['id']) : [];
                             <input type="hidden" name="action" value="update_rfo">
                             <input type="hidden" name="document_id" value="<?= $selected_doc['id'] ?>">
 
-                            <div class="row g-3">
+                            <!-- 1. Incident Overview & Timings -->
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="fa-solid fa-circle-info me-2 text-primary"></i>1. Incident Overview & Timings</h6>
+                            <div class="row g-3 mb-4">
                                 <div class="col-md-8">
                                     <label class="form-label fw-semibold">Report Title</label>
                                     <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($selected_doc['title']) ?>" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">Incident Number</label>
-                                    <input type="text" name="incident_number" class="form-control" value="<?= htmlspecialchars($rfo_details['incident_number'] ?? '') ?>" placeholder="INC-99182">
+                                    <input type="text" name="incident_number" class="form-control" value="<?= htmlspecialchars($rfo_details['incident_number'] ?? '') ?>" placeholder="INC-2026-9081">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Service Affected</label>
-                                    <input type="text" name="service_affected" class="form-control" value="<?= htmlspecialchars($rfo_details['service_affected'] ?? '') ?>">
+                                    <label class="form-label fw-semibold">Services Affected</label>
+                                    <input type="text" name="service_affected" class="form-control" value="<?= htmlspecialchars($rfo_details['service_affected'] ?? '') ?>" placeholder="Core IP Backhaul">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Systems Affected</label>
+                                    <input type="text" name="systems_affected" class="form-control" value="<?= htmlspecialchars($rfo_details['systems_affected'] ?? '') ?>" placeholder="Core Switch Stack, Gateway Router">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Customers Affected</label>
+                                    <input type="text" name="customers_affected" class="form-control" value="<?= htmlspecialchars($rfo_details['customers_affected'] ?? '') ?>" placeholder="Enterprise Subscriptions (N/A if none)">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Geographic Areas</label>
+                                    <input type="text" name="geographic_areas_affected" class="form-control" value="<?= htmlspecialchars($rfo_details['geographic_areas_affected'] ?? '') ?>" placeholder="US-East Region">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-semibold">Incident Severity</label>
@@ -145,13 +164,33 @@ $timelines = $selected_doc ? doc_get_rfo_timelines($selected_doc['id']) : [];
                                         <option value="Public" <?= $selected_doc['classification'] === 'Public' ? 'selected' : '' ?>>Public</option>
                                     </select>
                                 </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Start Time</label>
+                                    <input type="datetime-local" name="start_datetime" class="form-control" value="<?= !empty($rfo_details['start_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['start_datetime'])) : '' ?>">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Detection Time</label>
+                                    <input type="datetime-local" name="detection_datetime" class="form-control" value="<?= !empty($rfo_details['detection_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['detection_datetime'])) : '' ?>">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Escalation Time</label>
+                                    <input type="datetime-local" name="escalation_datetime" class="form-control" value="<?= !empty($rfo_details['escalation_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['escalation_datetime'])) : '' ?>">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Restoration Time</label>
+                                    <input type="datetime-local" name="service_restoration_datetime" class="form-control" value="<?= !empty($rfo_details['service_restoration_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['service_restoration_datetime'])) : '' ?>">
+                                </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Assigned Incident Owner</label>
+                                    <label class="form-label fw-semibold">Total Duration</label>
+                                    <input type="text" name="total_duration" class="form-control" value="<?= htmlspecialchars($rfo_details['total_duration'] ?? '') ?>" placeholder="e.g. 1h 45m">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Assigned Owner</label>
                                     <select name="assigned_owner_id" class="form-select">
                                         <option value="">Unassigned</option>
                                         <?php foreach ($all_users as $u): ?>
                                             <option value="<?= $u['id'] ?>" <?= ($rfo_details['assigned_owner_id'] ?? 0) == $u['id'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?> (<?= htmlspecialchars($u['email']) ?>)
+                                                <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
@@ -167,44 +206,77 @@ $timelines = $selected_doc ? doc_get_rfo_timelines($selected_doc['id']) : [];
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Approving Authority</label>
-                                    <select name="approver_id" class="form-select">
-                                        <option value="">Unassigned</option>
-                                        <?php foreach ($all_users as $u): ?>
-                                            <option value="<?= $u['id'] ?>" <?= ($rfo_details['approver_id'] ?? 0) == $u['id'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars(!empty($u['display_name']) ? $u['display_name'] : $u['username']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
+                            </div>
+
+                            <!-- 2. Impact & Detection Analysis -->
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="fa-solid fa-magnifying-glass me-2 text-info"></i>2. Impact & Detection Analysis</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Detection Method</label>
+                                    <input type="text" name="detection_method" class="form-control" value="<?= htmlspecialchars($rfo_details['detection_method'] ?? '') ?>" placeholder="Automated Monitoring, Customer Report, etc.">
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label fw-semibold">Start Datetime</label>
-                                    <input type="datetime-local" name="start_datetime" class="form-control" value="<?= !empty($rfo_details['start_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['start_datetime'])) : '' ?>">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Initial Symptoms</label>
+                                    <input type="text" name="initial_symptoms" class="form-control" value="<?= htmlspecialchars($rfo_details['initial_symptoms'] ?? '') ?>" placeholder="Latency spike, packet loss, BGP flap">
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label fw-semibold">Detection Datetime</label>
-                                    <input type="datetime-local" name="detection_datetime" class="form-control" value="<?= !empty($rfo_details['detection_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['detection_datetime'])) : '' ?>">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Impact Description</label>
+                                    <textarea name="impact_description" class="form-control" rows="2"><?= htmlspecialchars($rfo_details['impact_description'] ?? '') ?></textarea>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label fw-semibold">Restoration Datetime</label>
-                                    <input type="datetime-local" name="service_restoration_datetime" class="form-control" value="<?= !empty($rfo_details['service_restoration_datetime']) ? date('Y-m-d\TH:i', strtotime($rfo_details['service_restoration_datetime'])) : '' ?>">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label fw-semibold">Total Duration</label>
-                                    <input type="text" name="total_duration" class="form-control" value="<?= htmlspecialchars($rfo_details['total_duration'] ?? '') ?>" placeholder="e.g. 1h 45m">
-                                </div>
+                            </div>
+
+                            <!-- 3. Root Cause & Contributing Factors -->
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="fa-solid fa-bug me-2 text-danger"></i>3. Root Cause & Contributing Factors</h6>
+                            <div class="row g-3 mb-4">
                                 <div class="col-12">
                                     <label class="form-label fw-semibold">Root Cause Analysis</label>
                                     <textarea name="root_cause" class="form-control" rows="3"><?= htmlspecialchars($rfo_details['root_cause'] ?? '') ?></textarea>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label fw-semibold">Resolution & Recovery Actions</label>
-                                    <textarea name="resolution" class="form-control" rows="3"><?= htmlspecialchars($rfo_details['resolution'] ?? '') ?></textarea>
+                                    <label class="form-label fw-semibold">Contributing Factors</label>
+                                    <textarea name="contributing_factors" class="form-control" rows="2"><?= htmlspecialchars($rfo_details['contributing_factors'] ?? '') ?></textarea>
                                 </div>
-                                <div class="col-12 text-end">
-                                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i> Save Incident Details</button>
+                            </div>
+
+                            <!-- 4. Resolution & Action Items -->
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="fa-solid fa-shield-halved me-2 text-success"></i>4. Resolution & Preventative Action Items</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Resolution Summary</label>
+                                    <textarea name="resolution" class="form-control" rows="2"><?= htmlspecialchars($rfo_details['resolution'] ?? '') ?></textarea>
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Recovery Actions</label>
+                                    <textarea name="recovery_actions" class="form-control" rows="2"><?= htmlspecialchars($rfo_details['recovery_actions'] ?? '') ?></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Corrective Actions</label>
+                                    <textarea name="corrective_actions" class="form-control" rows="2"><?= htmlspecialchars($rfo_details['corrective_actions'] ?? '') ?></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Preventative Actions</label>
+                                    <textarea name="preventative_actions" class="form-control" rows="2"><?= htmlspecialchars($rfo_details['preventative_actions'] ?? '') ?></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Lessons Learned</label>
+                                    <textarea name="lessons_learned" class="form-control" rows="2"><?= htmlspecialchars($rfo_details['lessons_learned'] ?? '') ?></textarea>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Related Tickets</label>
+                                    <input type="text" name="related_tickets" class="form-control" value="<?= htmlspecialchars($rfo_details['related_tickets'] ?? '') ?>" placeholder="INC-1002, INC-1003">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Related Changes</label>
+                                    <input type="text" name="related_changes" class="form-control" value="<?= htmlspecialchars($rfo_details['related_changes'] ?? '') ?>" placeholder="CHG-5501">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Related RFOs</label>
+                                    <input type="text" name="related_rfos" class="form-control" value="<?= htmlspecialchars($rfo_details['related_rfos'] ?? '') ?>" placeholder="RFO-2025-000040">
+                                </div>
+                            </div>
+
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-1"></i> Save Incident Details</button>
                             </div>
                         </form>
                     </div>
@@ -310,11 +382,11 @@ $timelines = $selected_doc ? doc_get_rfo_timelines($selected_doc['id']) : [];
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Incident Number</label>
-                            <input type="text" name="incident_number" class="form-control" placeholder="INC-99012">
+                            <input type="text" name="incident_number" class="form-control" placeholder="INC-2026-9081">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Service Affected</label>
-                            <input type="text" name="service_affected" class="form-control" placeholder="e.g. Fiber Backhaul / VoIP Portal">
+                            <input type="text" name="service_affected" class="form-control" placeholder="e.g. Core IP Backhaul">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Incident Severity</label>
