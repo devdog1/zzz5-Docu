@@ -21,8 +21,9 @@ doc_audit_log('DOCUMENT_EXPORT_PDF', 'document', $doc_id, 'SUCCESS', ['document_
 $approvals = doc_get_approvals($doc_id);
 $site_name = get_setting('site_name', 'ENTERPRISE PORTAL');
 $owner = current_user()['name'] ?? 'Document Owner';
-$company_logo_url = get_setting('doc_manager_company_logo_url', '');
-$watermark_enabled = get_setting('doc_manager_pdf_watermark_enabled', '1');
+$company_logo_url = doc_get_setting('company_logo_url', '');
+$watermark_enabled = doc_get_setting('pdf_watermark_enabled', '1');
+$pdf_footer_notice = doc_get_setting('pdf_footer_notice', 'Governed Document Record — Managed by Portal Framework');
 $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
 ?>
 <!DOCTYPE html>
@@ -180,7 +181,7 @@ $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
         <?php endif; ?>
 
         <div class="pdf-footer">
-            <p class="mb-1"><strong><?= htmlspecialchars($doc['classification']) ?></strong> — <?= htmlspecialchars($site_name) ?> Document Management System</p>
+            <p class="mb-1"><strong><?= htmlspecialchars($doc['classification']) ?></strong> — <?= htmlspecialchars($pdf_footer_notice) ?></p>
             <p class="mb-0">Document Verification Identifier: <code><?= htmlspecialchars($doc['verification_code'] ?? 'N/A') ?></code></p>
         </div>
     </div>

@@ -12,7 +12,7 @@ if (!defined('APP_ROOT')) {
     define('APP_ROOT', __DIR__ . '/../../');
 }
 
-// Load Models & Business Logic
+// Load Domain Models Engine
 require_once __DIR__ . '/models/doc-models.php';
 
 // Load Background Scheduled Tasks
@@ -57,12 +57,14 @@ function doc_plugin_uninstall_tables($purge_tables = false) {
  * ========================================================= */
 
 add_action('init_scheduler', function($scheduler) {
-    $scheduler->registerTask(
-        'doc_retention_check',
-        'doc_task_retention_check',
-        86400, // Daily (24 hours)
-        'doc-manager'
-    );
+    if (doc_get_setting('module_retention_enabled', '1') === '1') {
+        $scheduler->registerTask(
+            'doc_retention_check',
+            'doc_task_retention_check',
+            86400, // Daily (24 hours)
+            'doc-manager'
+        );
+    }
 
     $scheduler->registerTask(
         'doc_deadline_alerts',
@@ -88,18 +90,33 @@ add_filter('theme_nav_links', function($nav) {
         'children' => [
             ['label' => 'Dashboard', 'icon' => 'fa-solid fa-chart-line', 'route' => 'doc_manager_dashboard'],
             ['label' => 'Document Repository', 'icon' => 'fa-solid fa-folder-open', 'route' => 'doc_manager_documents'],
-            ['label' => 'RFO / Incident Reports', 'icon' => 'fa-solid fa-triangle-exclamation', 'route' => 'doc_manager_rfo'],
-            ['label' => 'Post-Mortem Module', 'icon' => 'fa-solid fa-microscope', 'route' => 'doc_manager_post_mortem'],
         ]
     ];
 
-    if (doc_can_access_lawful_requests()) {
-        $doc_menu['children'][] = ['label' => 'Lawful Work Orders', 'icon' => 'fa-solid fa-scale-balanced', 'route' => 'doc_manager_lawful'];
-        $doc_menu['children'][] = ['label' => 'Legal Holds', 'icon' => 'fa-solid fa-lock', 'route' => 'doc_manager_legal_hold'];
+    if (doc_get_setting('module_rfo_enabled', '1') === '1') {
+        $doc_menu['children'][] = ['label' => 'RFO / Incident Reports', 'icon' => 'fa-solid fa-triangle-exclamation', 'route' => 'doc_manager_rfo'];
     }
 
-    $doc_menu['children'][] = ['label' => 'Retention & Disposition', 'icon' => 'fa-solid fa-hourglass-half', 'route' => 'doc_manager_retention'];
-    $doc_menu['children'][] = ['label' => 'Analytics & Reports', 'icon' => 'fa-solid fa-chart-column', 'route' => 'doc_manager_reports'];
+    if (doc_get_setting('module_post_mortem_enabled', '1') === '1') {
+        $doc_menu['children'][] = ['label' => 'Post-Mortem Module', 'icon' => 'fa-solid fa-microscope', 'route' => 'doc_manager_post_mortem'];
+    }
+
+    if (doc_can_access_lawful_requests()) {
+        if (doc_get_setting('module_lawful_enabled', '1') === '1') {
+            $doc_menu['children'][] = ['label' => 'Lawful Work Orders', 'icon' => 'fa-solid fa-scale-balanced', 'route' => 'doc_manager_lawful'];
+        }
+        if (doc_get_setting('module_legal_hold_enabled', '1') === '1') {
+            $doc_menu['children'][] = ['label' => 'Legal Holds', 'icon' => 'fa-solid fa-lock', 'route' => 'doc_manager_legal_hold'];
+        }
+    }
+
+    if (doc_get_setting('module_retention_enabled', '1') === '1') {
+        $doc_menu['children'][] = ['label' => 'Retention & Disposition', 'icon' => 'fa-solid fa-hourglass-half', 'route' => 'doc_manager_retention'];
+    }
+
+    if (doc_get_setting('module_reports_enabled', '1') === '1') {
+        $doc_menu['children'][] = ['label' => 'Analytics & Reports', 'icon' => 'fa-solid fa-chart-column', 'route' => 'doc_manager_reports'];
+    }
 
     if (has_permission('doc_manager_manage_types') || has_permission('manage_settings')) {
         $doc_menu['children'][] = ['label' => 'Admin Settings', 'icon' => 'fa-solid fa-gears', 'route' => 'doc_manager_admin'];
@@ -130,31 +147,37 @@ add_action('register_routes', function() {
     });
 
     register_route('doc_manager_rfo', function() {
+        if (doc_get_setting('module_rfo_enabled', '1') !== '1') die('Module Disabled');
         if (!has_permission('view_documents') && !has_permission('doc_manager_view_documents')) die('Access Denied');
         require_once __DIR__ . '/views/rfo-view.php';
     });
 
     register_route('doc_manager_post_mortem', function() {
+        if (doc_get_setting('module_post_mortem_enabled', '1') !== '1') die('Module Disabled');
         if (!has_permission('view_documents') && !has_permission('doc_manager_view_documents')) die('Access Denied');
         require_once __DIR__ . '/views/post-mortem-view.php';
     });
 
     register_route('doc_manager_lawful', function() {
+        if (doc_get_setting('module_lawful_enabled', '1') !== '1') die('Module Disabled');
         if (!doc_can_access_lawful_requests()) die('Access Denied: Requires legal_request.access privilege.');
         require_once __DIR__ . '/views/lawful-view.php';
     });
 
     register_route('doc_manager_legal_hold', function() {
+        if (doc_get_setting('module_legal_hold_enabled', '1') !== '1') die('Module Disabled');
         if (!doc_can_access_lawful_requests()) die('Access Denied: Requires legal_request.access privilege.');
         require_once __DIR__ . '/views/legal-hold-view.php';
     });
 
     register_route('doc_manager_retention', function() {
+        if (doc_get_setting('module_retention_enabled', '1') !== '1') die('Module Disabled');
         if (!has_permission('view_documents') && !has_permission('doc_manager_view_documents')) die('Access Denied');
         require_once __DIR__ . '/views/retention-view.php';
     });
 
     register_route('doc_manager_reports', function() {
+        if (doc_get_setting('module_reports_enabled', '1') !== '1') die('Module Disabled');
         if (!has_permission('view_documents') && !has_permission('doc_manager_view_documents')) die('Access Denied');
         require_once __DIR__ . '/views/reports-view.php';
     });
@@ -175,6 +198,9 @@ add_action('register_routes', function() {
  * ========================================================= */
 
 add_action('index_dashboard_widgets', function($userContext) {
+    if (doc_get_setting('widget_dashboard_enabled', '1') !== '1') {
+        return;
+    }
     if (!has_permission('view_documents') && !has_permission('doc_manager_view_documents')) {
         return;
     }

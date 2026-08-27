@@ -1,28 +1,32 @@
 # Document Management System Plugin (`doc-manager`)
 
-An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, audit trail logging, retention disposition management, automated background tasks, configurable background classification watermarks, and professional PDF generation.
+An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, audit trail logging, retention disposition management, automated background tasks, configurable background classification watermarks, granular sub-module enable/disable toggles, and professional PDF generation.
 
 ---
 
 ## Table of Contents
 1. [Key Features](#key-features)
-2. [Word-Style WYSIWYG Editor & Templates](#word-style-wysiwyg-editor--templates)
-3. [Security Classifications & RBAC](#security-classifications--rbac)
-4. [Document Types & Auto-Numbering](#document-types--auto-numbering)
-5. [RFO / Incident Report Module](#rfo--incident-report-module)
-6. [Post-Mortem Module & Action Tracking](#post-mortem-module--action-tracking)
-7. [Lawful Request & Chain of Custody Module](#lawful-request--chain-of-custody-module)
-8. [Legal Hold Module](#legal-hold-module)
-9. [Approval Workflows & Version Control](#approval-workflows--version-control)
-10. [Retention & Disposition Management](#retention--disposition-management)
-11. [Background Scheduled Tasks](#background-scheduled-tasks)
-12. [PDF Watermarks & Audit Log](#pdf-watermarks--audit-log)
-13. [Installation & Database Isolation](#installation--database-isolation)
+2. [Modular Domain Architecture](#modular-domain-architecture)
+3. [Verbose Plugin Settings & Module Toggles](#verbose-plugin-settings--module-toggles)
+4. [Word-Style WYSIWYG Editor & Templates](#word-style-wysiwyg-editor--templates)
+5. [Security Classifications & RBAC](#security-classifications--rbac)
+6. [Document Types & Auto-Numbering](#document-types--auto-numbering)
+7. [RFO / Incident Report Module](#rfo--incident-report-module)
+8. [Post-Mortem Module & Action Tracking](#post-mortem-module--action-tracking)
+9. [Lawful Request & Chain of Custody Module](#lawful-request--chain-of-custody-module)
+10. [Legal Hold Module](#legal-hold-module)
+11. [Approval Workflows & Version Control](#approval-workflows--version-control)
+12. [Retention & Disposition Management](#retention--disposition-management)
+13. [Background Scheduled Tasks](#background-scheduled-tasks)
+14. [PDF Watermarks & Audit Log](#pdf-watermarks--audit-log)
+15. [Installation & Database Isolation](#installation--database-isolation)
 
 ---
 
 ## Key Features
 
+- **Modular Domain Models**: Refactored domain architecture split across dedicated files (`doc-core-models.php`, `doc-types-models.php`, `doc-crud-models.php`, `doc-rfo-models.php`, `doc-postmortem-models.php`, `doc-lawful-models.php`, `doc-legalhold-models.php`, `doc-workflow-models.php`, `doc-retention-models.php`).
+- **Verbose Admin Settings**: Comprehensive tabbed configuration panel for enable/disable sub-module toggles, company logo branding, PDF watermarks, footer notices, deadline alert thresholds, canned text snippets, and document type templates.
 - **Word-Style WYSIWYG Editor**: Create and format document body content with headings, rich text formatting (bold, italic, underline, colors, text alignment, lists, tables), pasted images/logos, and canned paragraphs.
 - **Document Templates & Placeholders**: Document types define default HTML templates with dynamic tags: `{ORGANIZATION_LOGO}`, `{DOCUMENT_NUMBER}`, `{TITLE}`, `{CLASSIFICATION}`, `{DEPARTMENT}`, `{DATE}`, and `{OWNER}`.
 - **Repeating Classification Watermark**: Configurable option in Admin settings (`doc_manager_pdf_watermark_enabled`) to display repeating diagonal classification background watermarks across exported PDF pages.
@@ -36,6 +40,32 @@ An enterprise-grade, highly governed Document Management module built for the `z
 - **No Hard Delete Enforcement**: Enforces soft disposition states (`Pending Disposition`, `Destroyed Certificate`) to preserve compliance history.
 - **Background Scheduled Tasks**: Automated daily retention expiry checks and hourly deadline/overdue alert monitoring.
 - **PDF Export**: Renders professional printable document views complete with classification headers, company logo, footers, approval logs, and verification hash codes.
+
+---
+
+## Modular Domain Architecture
+
+The plugin business logic is organized into focused, modular domain files under `plugins/doc-manager/models/`:
+- `doc-core-models.php`: Core database wrapper, settings engine, audit logging, security permission checks.
+- `doc-types-models.php`: Document type administration, auto-numbering, templates, canned snippets.
+- `doc-crud-models.php`: Document CRUD, version history, search, comments, relationships, soft deletion.
+- `doc-rfo-models.php`: RFO / Incident report details and timeline entries.
+- `doc-postmortem-models.php`: Post-Mortem reviews and trackable action items.
+- `doc-lawful-models.php`: Lawful requests and SHA-256 chain of custody.
+- `doc-legalhold-models.php`: Legal holds and litigation preservation rules.
+- `doc-workflow-models.php`: Approval workflow steps and decisions.
+- `doc-retention-models.php`: Retention disposition queue and destruction certificates.
+- `doc-models.php`: Master domain model loader for clean backward compatibility.
+
+---
+
+## Verbose Plugin Settings & Module Toggles
+
+Access via `index.php?route=doc_manager_admin`:
+- **Sub-Module Enable/Disable Toggles**: Turn on or off RFO, Post-Mortem, Lawful Requests, Legal Holds, Retention, Analytics Reports, or Home Dashboard Widget. Disabled modules are hidden from navigation menus and protected at the route level.
+- **Branding & PDF Export**: Configure company logo URL, PDF background watermark toggle, and custom PDF footer disclaimers.
+- **Deadline Thresholds**: Configure response deadline alert lead times in days.
+- **Canned Snippet Manager**: Edit or add standardized disclaimers and legal notices.
 
 ---
 
