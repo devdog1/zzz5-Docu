@@ -252,7 +252,7 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
                                     <strong class="text-primary"><?= htmlspecialchars($app['step_name']) ?></strong>
                                     <span class="badge bg-<?= $app['status'] === 'Approved' ? 'success' : 'secondary' ?>"><?= htmlspecialchars($app['status']) ?></span>
                                 </div>
-                                <div><strong>Authorized Signer:</strong> <?= htmlspecialchars($app['approver_name'] ?: 'Pending Assignment') ?></div>
+                                <div><strong>Signer:</strong> <?= htmlspecialchars($app['approver_name'] ?: 'Pending Assignment') ?></div>
                                 <?php if (!empty($app['decided_at'])): ?>
                                     <div><strong>Signed At:</strong> <?= date('F d, Y H:i:s', strtotime($app['decided_at'])) ?></div>
                                 <?php endif; ?>
