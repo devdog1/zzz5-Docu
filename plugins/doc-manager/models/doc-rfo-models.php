@@ -7,6 +7,47 @@ if (!defined('APP_ROOT')) {
 
 require_once __DIR__ . '/doc-core-models.php';
 
+/**
+ * Programmatically create an RFO / Incident Report document and save its details.
+ * Useful for external plugins (e.g., Incident Management, Monitoring, Ticketing) to initiate RFOs.
+ *
+ * @param array $data Contains title, incident_number, service_affected, systems_affected, impact_description, etc.
+ * @return int Created document ID
+ */
+function doc_create_rfo_report($data) {
+    $rfo_type_id = doc_get_type_id_by_code('RFO');
+    $title = $data['title'] ?? 'Incident Report: ' . ($data['service_affected'] ?? 'Outage Event');
+
+    $doc_id = doc_create_document([
+        'document_type_id' => $rfo_type_id,
+        'title'           => $title,
+        'description'     => $data['impact_description'] ?? ($data['description'] ?? ''),
+        'classification'  => $data['classification'] ?? 'Internal',
+        'department'      => $data['service_affected'] ?? 'Operations',
+        'status'          => $data['status'] ?? 'Draft'
+    ]);
+
+    doc_save_rfo_details($doc_id, $data);
+
+    if (!empty($data['initial_event_timeline'])) {
+        doc_add_rfo_timeline_entry(
+            $doc_id,
+            date('Y-m-d H:i:s'),
+            $data['initial_event_timeline'],
+            $data['person'] ?? 'System / External Plugin',
+            $data['source'] ?? 'Inter-Plugin API',
+            $data['notes'] ?? 'Auto-generated event timeline from external plugin trigger'
+        );
+    }
+
+    doc_audit_log('RFO_INITIATED_EXTERNALLY', 'document', $doc_id, 'SUCCESS', [
+        'incident_number' => $data['incident_number'] ?? 'N/A',
+        'service' => $data['service_affected'] ?? 'N/A'
+    ]);
+
+    return $doc_id;
+}
+
 function doc_save_rfo_details($doc_id, $data) {
     $pdb = doc_get_pdb();
     $tb = $pdb->getTableName('rfo_details');

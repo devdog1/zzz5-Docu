@@ -53,6 +53,20 @@ function doc_plugin_uninstall_tables($purge_tables = false) {
 }
 
 /* =========================================================
+ * INTER-PLUGIN HOOK REGISTRATION
+ * Allows other framework plugins (e.g. Incident/Ticket/Monitoring plugins)
+ * to initiate an RFO report via `do_action('doc_manager_create_rfo', $data)`
+ * ========================================================= */
+
+add_action('doc_manager_create_rfo', 'doc_handle_create_rfo_hook', 10, 1);
+function doc_handle_create_rfo_hook($data) {
+    if (is_array($data)) {
+        return doc_create_rfo_report($data);
+    }
+    return false;
+}
+
+/* =========================================================
  * SCHEDULED BACKGROUND TASKS REGISTRATION
  * ========================================================= */
 
