@@ -25,8 +25,14 @@ $watermark_enabled = doc_get_setting('pdf_watermark_enabled', '1');
 $pdf_footer_notice = doc_get_setting('pdf_footer_notice', 'Governed Document Record — Managed by Portal Framework');
 $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
 
-$verify_url = url_for('doc_manager_document_detail') . '&id=' . $doc['id'] . '&v=' . urlencode($doc['verification_code'] ?? '');
-$qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlencode($verify_url);
+// Fetch RFO details and timelines if RFO / Incident document type
+$rfo_details = null;
+$rfo_timelines = [];
+if (($doc['document_type_code'] ?? '') === 'RFO' || stristr($doc['document_type_name'] ?? '', 'rfo') || stristr($doc['document_type_name'] ?? '', 'incident')) {
+    $rfo_details = doc_get_rfo_details($doc_id);
+    $rfo_timelines = doc_get_rfo_timelines($doc_id);
+}
+
 $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
 ?>
 <!DOCTYPE html>
@@ -37,7 +43,9 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #fff; color: #333; position: relative; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #fff; color: #333; position: relative; margin: 0; padding: 20px; overflow-x: hidden; }
+        #pdfContent { max-width: 750px; margin: 0 auto; background: #fff; padding: 15px; position: relative; z-index: 2; }
         .pdf-header { border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 25px; position: relative; z-index: 2; height: 85px; }
         .classification-header { text-align: center; font-weight: bold; padding: 6px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; position: relative; z-index: 2; }
         .classification-header.RESTRICTED { background-color: #dc3545; color: #fff; }
@@ -47,14 +55,17 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
         .pdf-footer { border-top: 1px solid #ddd; padding-top: 15px; margin-top: 40px; font-size: 0.85rem; color: #666; text-align: center; position: relative; z-index: 2; }
         .rich-content img { max-width: 100%; height: auto; }
         .signature-stamp { border: 2px dashed #198754; background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 12px; }
+        .page-break { page-break-before: always; }
+        .section-box { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; margin-bottom: 20px; }
+        .rfo-table th { background-color: #e9ecef; }
 
         <?php if ($watermark_enabled === '1'): ?>
         .watermark-container {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            right: 0;
+            bottom: 0;
             pointer-events: none;
             z-index: 0;
             overflow: hidden;
@@ -65,35 +76,25 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
             align-content: space-around;
         }
         .watermark-text {
-            font-size: 32px;
+            font-size: 28px;
             font-weight: 900;
             color: #000;
             transform: rotate(-35deg);
             user-select: none;
-            margin: 60px 40px;
+            margin: 40px 20px;
             white-space: nowrap;
             letter-spacing: 4px;
         }
         <?php endif; ?>
-
-        .content-body { position: relative; z-index: 2; }
 
         @media print {
             .no-print { display: none !important; }
         }
     </style>
 </head>
-<body class="p-5">
+<body>
 
-    <?php if ($watermark_enabled === '1'): ?>
-        <div class="watermark-container">
-            <?php for ($i = 0; $i < 24; $i++): ?>
-                <div class="watermark-text"><?= htmlspecialchars($classification_str) ?></div>
-            <?php endfor; ?>
-        </div>
-    <?php endif; ?>
-
-    <div class="no-print mb-4 text-end">
+    <div class="no-print mb-4 text-center">
         <button onclick="downloadPDF();" class="btn btn-danger fw-bold" id="downloadBtn">
             <i class="fa-solid fa-file-pdf me-1"></i> Download PDF Document
         </button>
@@ -102,7 +103,15 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
         </button>
     </div>
 
-    <div class="content-body" id="pdfContent">
+    <div id="pdfContent">
+        <?php if ($watermark_enabled === '1'): ?>
+            <div class="watermark-container">
+                <?php for ($i = 0; $i < 20; $i++): ?>
+                    <div class="watermark-text"><?= htmlspecialchars($classification_str) ?></div>
+                <?php endfor; ?>
+            </div>
+        <?php endif; ?>
+
         <div class="classification-header <?= $classification_str ?>">
             <?= $classification_str ?> — AUTHORIZED ACCESS ONLY
         </div>
@@ -116,14 +125,14 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
                 <?php endif; ?>
             </div>
             <div class="text-end d-flex align-items-center">
-                <div class="me-3 text-end">
+                <div class="text-end">
                     <h4 class="fw-bold mb-0 font-monospace"><?= htmlspecialchars($doc['document_number']) ?></h4>
                     <span class="badge bg-secondary">Version: v<?= htmlspecialchars($doc['current_version']) ?></span>
                 </div>
-                <img src="<?= htmlspecialchars($qr_code_url) ?>" alt="Verification QR Code" style="width: 75px; height: 75px;" class="border p-1 bg-white">
             </div>
         </div>
 
+        <!-- Cover Page / Header Overview -->
         <div class="row mb-4">
             <div class="col-6">
                 <p class="mb-1"><strong>Document Title:</strong> <?= htmlspecialchars($doc['title']) ?></p>
@@ -140,7 +149,7 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
 
         <hr class="my-4">
 
-        <div class="mb-5">
+        <div class="mb-4">
             <h5 class="fw-bold text-dark mb-3">Document Content</h5>
             <div class="p-4 bg-light rounded border rich-content">
                 <?php
@@ -153,6 +162,84 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
                 ?>
             </div>
         </div>
+
+        <!-- RFO / Incident Details Section -->
+        <?php if ($rfo_details): ?>
+            <div class="page-break"></div>
+            <div class="mb-4 pt-3">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-2 border-danger">
+                    <h4 class="fw-bold text-danger mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i>Reason For Outage (RFO) Incident Analysis</h4>
+                    <span class="badge bg-<?= $rfo_details['incident_severity'] === 'SEV-1' ? 'danger' : 'warning text-dark' ?> fs-6">
+                        <?= htmlspecialchars($rfo_details['incident_severity'] ?? 'SEV-2') ?>
+                    </span>
+                </div>
+
+                <div class="section-box">
+                    <h6 class="fw-bold text-dark mb-3">1. Incident Overview & Timings</h6>
+                    <div class="row g-2 small">
+                        <div class="col-6"><strong>Incident Number:</strong> <?= htmlspecialchars($rfo_details['incident_number'] ?? 'N/A') ?></div>
+                        <div class="col-6"><strong>Total Duration:</strong> <?= htmlspecialchars($rfo_details['total_duration'] ?? 'N/A') ?></div>
+                        <div class="col-6"><strong>Services Affected:</strong> <?= htmlspecialchars($rfo_details['service_affected'] ?? 'N/A') ?></div>
+                        <div class="col-6"><strong>Systems Affected:</strong> <?= htmlspecialchars($rfo_details['systems_affected'] ?? 'N/A') ?></div>
+                        <div class="col-6"><strong>Customers Affected:</strong> <?= htmlspecialchars($rfo_details['customers_affected'] ?? 'N/A') ?></div>
+                        <div class="col-6"><strong>Geographic Areas:</strong> <?= htmlspecialchars($rfo_details['geographic_areas_affected'] ?? 'N/A') ?></div>
+                        <div class="col-6"><strong>Start Time:</strong> <?= htmlspecialchars($rfo_details['start_datetime'] ?? 'N/A') ?></div>
+                        <div class="col-6"><strong>Detection Time:</strong> <?= htmlspecialchars($rfo_details['detection_datetime'] ?? 'N/A') ?></div>
+                        <div class="col-6"><strong>Escalation Time:</strong> <?= htmlspecialchars($rfo_details['escalation_datetime'] ?? 'N/A') ?></div>
+                        <div class="col-6"><strong>Restoration Time:</strong> <?= htmlspecialchars($rfo_details['service_restoration_datetime'] ?? 'N/A') ?></div>
+                    </div>
+                </div>
+
+                <div class="section-box">
+                    <h6 class="fw-bold text-dark mb-2">2. Impact & Detection Analysis</h6>
+                    <p class="small mb-2"><strong>Impact Description:</strong> <?= nl2br(htmlspecialchars($rfo_details['impact_description'] ?? 'None recorded.')) ?></p>
+                    <p class="small mb-2"><strong>Initial Symptoms:</strong> <?= nl2br(htmlspecialchars($rfo_details['initial_symptoms'] ?? 'None recorded.')) ?></p>
+                    <p class="small mb-0"><strong>Detection Method:</strong> <?= htmlspecialchars($rfo_details['detection_method'] ?? 'N/A') ?></p>
+                </div>
+
+                <div class="section-box">
+                    <h6 class="fw-bold text-dark mb-2">3. Root Cause & Contributing Factors</h6>
+                    <p class="small mb-2"><strong>Root Cause Analysis:</strong> <?= nl2br(htmlspecialchars($rfo_details['root_cause'] ?? 'Analysis pending.')) ?></p>
+                    <p class="small mb-0"><strong>Contributing Factors:</strong> <?= nl2br(htmlspecialchars($rfo_details['contributing_factors'] ?? 'None specified.')) ?></p>
+                </div>
+
+                <div class="section-box">
+                    <h6 class="fw-bold text-dark mb-2">4. Resolution & Preventative Action Items</h6>
+                    <p class="small mb-2"><strong>Resolution Summary:</strong> <?= nl2br(htmlspecialchars($rfo_details['resolution'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Recovery Actions:</strong> <?= nl2br(htmlspecialchars($rfo_details['recovery_actions'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Corrective Actions:</strong> <?= nl2br(htmlspecialchars($rfo_details['corrective_actions'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Preventative Actions:</strong> <?= nl2br(htmlspecialchars($rfo_details['preventative_actions'] ?? 'N/A')) ?></p>
+                    <p class="small mb-0"><strong>Lessons Learned:</strong> <?= nl2br(htmlspecialchars($rfo_details['lessons_learned'] ?? 'N/A')) ?></p>
+                </div>
+
+                <!-- Interactive Timeline Table -->
+                <?php if (!empty($rfo_timelines)): ?>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Chronological Event Timeline</h6>
+                        <table class="table table-sm table-bordered small rfo-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Timestamp</th>
+                                    <th style="width: 35%;">Event Description</th>
+                                    <th style="width: 20%;">Person / Actor</th>
+                                    <th style="width: 20%;">Source / Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($rfo_timelines as $t): ?>
+                                    <tr>
+                                        <td><code><?= htmlspecialchars($t['timestamp']) ?></code></td>
+                                        <td><?= htmlspecialchars($t['event']) ?></td>
+                                        <td><?= htmlspecialchars($t['person'] ?: 'N/A') ?></td>
+                                        <td><?= htmlspecialchars($t['source'] ?: '') ?> <?= !empty($t['notes']) ? '(' . htmlspecialchars($t['notes']) . ')' : '' ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <?php if (!empty($approvals)): ?>
             <div class="mb-5">
@@ -179,14 +266,9 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
             </div>
         <?php endif; ?>
 
-        <div class="pdf-footer d-flex justify-content-between align-items-center">
-            <div>
-                <p class="mb-1"><strong><?= htmlspecialchars($doc['classification']) ?></strong> — <?= htmlspecialchars($pdf_footer_notice) ?></p>
-                <p class="mb-0">Document Verification Identifier: <code><?= htmlspecialchars($doc['verification_code'] ?? 'N/A') ?></code></p>
-            </div>
-            <div>
-                <small class="text-muted">Scan QR to verify document version</small>
-            </div>
+        <div class="pdf-footer text-center">
+            <p class="mb-1"><strong><?= htmlspecialchars($doc['classification']) ?></strong> — <?= htmlspecialchars($pdf_footer_notice) ?></p>
+            <p class="mb-0">Document Verification Identifier: <code><?= htmlspecialchars($doc['verification_code'] ?? 'N/A') ?></code></p>
         </div>
     </div>
 
@@ -200,10 +282,10 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
             let filename = '<?= htmlspecialchars($doc['document_number']) ?>.pdf';
 
             let opt = {
-                margin:       [0.4, 0.4, 0.4, 0.4],
+                margin:       [0.3, 0.3, 0.3, 0.3],
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
                 jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
