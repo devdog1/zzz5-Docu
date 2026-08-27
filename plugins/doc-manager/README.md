@@ -1,6 +1,6 @@
 # Document Management System Plugin (`doc-manager`)
 
-An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, audit trail logging, retention disposition management, automated background tasks, and professional PDF generation.
+An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, audit trail logging, retention disposition management, automated background tasks, configurable background classification watermarks, and professional PDF generation.
 
 ---
 
@@ -16,7 +16,7 @@ An enterprise-grade, highly governed Document Management module built for the `z
 9. [Approval Workflows & Version Control](#approval-workflows--version-control)
 10. [Retention & Disposition Management](#retention--disposition-management)
 11. [Background Scheduled Tasks](#background-scheduled-tasks)
-12. [Immutable Audit Log & PDF Export](#immutable-audit-log--pdf-export)
+12. [PDF Watermarks & Audit Log](#pdf-watermarks--audit-log)
 13. [Installation & Database Isolation](#installation--database-isolation)
 
 ---
@@ -25,6 +25,7 @@ An enterprise-grade, highly governed Document Management module built for the `z
 
 - **Word-Style WYSIWYG Editor**: Create and format document body content with headings, rich text formatting (bold, italic, underline, colors, text alignment, lists, tables), pasted images/logos, and canned paragraphs.
 - **Document Templates & Placeholders**: Document types define default HTML templates with dynamic tags: `{ORGANIZATION_LOGO}`, `{DOCUMENT_NUMBER}`, `{TITLE}`, `{CLASSIFICATION}`, `{DEPARTMENT}`, `{DATE}`, and `{OWNER}`.
+- **Repeating Classification Watermark**: Configurable option in Admin settings (`doc_manager_pdf_watermark_enabled`) to display repeating diagonal classification background watermarks across exported PDF pages.
 - **Canned Paragraph Snippets**: Quick-insert pre-approved text blocks (Confidentiality Notices, Incident Analysis Disclaimers, Legal Hold Warnings, Regulatory Statements).
 - **Document Auto-Numbering**: Formats document identifiers automatically based on configurable type templates (e.g., `RFO-2026-000123`, `PM-2026-000087`, `LWO-2026-000015`, `LH-2026-000004`, `SEC-2026-000032`, `POL-2026-000009`).
 - **Security Classifications**: Supports `Public`, `Internal`, `Confidential`, and `Restricted` documents with explicit permission enforcement.
@@ -153,10 +154,11 @@ The plugin registers background scheduled jobs with the framework's `Scheduler`:
 
 ---
 
-## Immutable Audit Log & PDF Export
+## PDF Watermarks & Audit Log
 
+- **PDF Watermarks**: Administrators can enable or disable repeating diagonal classification background watermarks (`RESTRICTED`, `CONFIDENTIAL`, `INTERNAL`, `PUBLIC`) on PDF exports in Admin settings.
 - **Audit Log**: Every creation, access, update, export, approval, classification change, or legal hold operation is logged in `plug_doc_manager_audit_log` with user ID, IP, timestamp, session ID, and metadata.
-- **PDF Export**: Generates printable document records with security banners (e.g., `CONFIDENTIAL — INTERNAL USE ONLY`), company logo, document metadata, approval signatures, and verification hashes.
+- **PDF Export**: Generates printable document records with security banners, company logo, document metadata, approval signatures, and verification hashes.
 
 ---
 

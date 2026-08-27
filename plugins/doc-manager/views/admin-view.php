@@ -37,7 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect(url_for('doc_manager_admin'));
         } elseif ($action === 'save_global_settings') {
             set_setting('doc_manager_company_logo_url', trim($_POST['company_logo_url'] ?? ''));
-            set_flash_message('success', 'Global branding settings saved.');
+            set_setting('doc_manager_pdf_watermark_enabled', !empty($_POST['pdf_watermark_enabled']) ? '1' : '0');
+            set_flash_message('success', 'Global branding and PDF watermark settings saved.');
             redirect(url_for('doc_manager_admin'));
         } elseif ($action === 'seed_demo') {
             doc_seed_demo_data();
@@ -52,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $types = doc_get_all_types();
 $canned = doc_get_canned_paragraphs();
 $company_logo_url = get_setting('doc_manager_company_logo_url', '');
+$pdf_watermark_enabled = get_setting('doc_manager_pdf_watermark_enabled', '1');
 ?>
 
 <!-- Quill WYSIWYG Rich Editor Resources -->
@@ -62,7 +64,7 @@ $company_logo_url = get_setting('doc_manager_company_logo_url', '');
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-gears me-2"></i>Document Administration & Template Editor</h2>
-            <p class="text-muted small mb-0">Configure document types, auto-numbering formats, branding logos, canned text & WYSIWYG templates.</p>
+            <p class="text-muted small mb-0">Configure document types, auto-numbering formats, branding logos, watermark options & WYSIWYG templates.</p>
         </div>
         <div>
             <form method="POST" action="<?= url_for('doc_manager_admin') ?>" class="d-inline">
@@ -76,22 +78,29 @@ $company_logo_url = get_setting('doc_manager_company_logo_url', '');
         </div>
     </div>
 
-    <!-- Global Branding Settings -->
+    <!-- Global Branding & Watermark Settings -->
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-white py-3">
-            <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-image me-2 text-primary"></i>Company Logo & Branding</h5>
+            <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-image me-2 text-primary"></i>Company Logo & PDF Watermark Settings</h5>
         </div>
         <div class="card-body">
             <form method="POST" action="<?= url_for('doc_manager_admin') ?>">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="save_global_settings">
                 <div class="row g-3 align-items-center">
-                    <div class="col-md-9">
+                    <div class="col-md-7">
                         <label class="form-label fw-semibold">Company Logo Image URL or Base64 Data URI</label>
                         <input type="text" name="company_logo_url" class="form-control" value="<?= htmlspecialchars($company_logo_url) ?>" placeholder="https://domain.com/assets/logo.png or data:image/png;base64,...">
                     </div>
-                    <div class="col-md-3 mt-4">
-                        <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-floppy-disk me-1"></i> Save Logo URL</button>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold d-block">PDF Watermark</label>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" name="pdf_watermark_enabled" value="1" id="watermarkToggle" <?= $pdf_watermark_enabled === '1' ? 'checked' : '' ?>>
+                            <label class="form-check-label fw-semibold" for="watermarkToggle">Enable Repeating Classification Watermark on PDF</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mt-4">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-floppy-disk me-1"></i> Save Branding</button>
                     </div>
                 </div>
             </form>
