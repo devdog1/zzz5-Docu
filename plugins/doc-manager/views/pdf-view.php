@@ -44,51 +44,40 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #fff; color: #333; position: relative; margin: 0; padding: 20px; overflow-x: hidden; }
-        #pdfContent { max-width: 750px; margin: 0 auto; background: #fff; padding: 15px; position: relative; z-index: 2; }
-        .pdf-header { border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 25px; position: relative; z-index: 2; height: 85px; }
-        .classification-header { text-align: center; font-weight: bold; padding: 6px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; position: relative; z-index: 2; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 20px; }
+        #pdfContent { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border: 1px solid #dee2e6; position: relative; }
+        .pdf-header { border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 25px; }
+        .classification-header { text-align: center; font-weight: bold; padding: 8px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; border-radius: 4px; }
         .classification-header.RESTRICTED { background-color: #dc3545; color: #fff; }
         .classification-header.CONFIDENTIAL { background-color: #ffc107; color: #000; }
         .classification-header.INTERNAL { background-color: #0dcaf0; color: #000; }
         .classification-header.PUBLIC { background-color: #198754; color: #fff; }
-        .pdf-footer { border-top: 1px solid #ddd; padding-top: 15px; margin-top: 40px; font-size: 0.85rem; color: #666; text-align: center; position: relative; z-index: 2; }
+        .pdf-footer { border-top: 1px solid #ddd; padding-top: 15px; margin-top: 40px; font-size: 0.85rem; color: #666; text-align: center; }
         .rich-content img { max-width: 100%; height: auto; }
         .signature-stamp { border: 2px dashed #198754; background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 12px; }
-        .page-break { page-break-before: always; }
+        .html2pdf__page-break { page-break-before: always; margin-top: 20px; }
         .section-box { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; margin-bottom: 20px; }
         .rfo-table th { background-color: #e9ecef; }
 
         <?php if ($watermark_enabled === '1'): ?>
-        .watermark-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 0;
-            overflow: hidden;
-            opacity: 0.08;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-            align-content: space-around;
-        }
-        .watermark-text {
-            font-size: 28px;
-            font-weight: 900;
-            color: #000;
-            transform: rotate(-35deg);
-            user-select: none;
-            margin: 40px 20px;
-            white-space: nowrap;
-            letter-spacing: 4px;
+        .watermark-banner {
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #6c757d;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            padding: 4px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 15px;
         }
         <?php endif; ?>
 
         @media print {
             .no-print { display: none !important; }
+            body { background: #fff; padding: 0; }
+            #pdfContent { border: none; padding: 0; }
         }
     </style>
 </head>
@@ -105,10 +94,8 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
 
     <div id="pdfContent">
         <?php if ($watermark_enabled === '1'): ?>
-            <div class="watermark-container">
-                <?php for ($i = 0; $i < 20; $i++): ?>
-                    <div class="watermark-text"><?= htmlspecialchars($classification_str) ?></div>
-                <?php endfor; ?>
+            <div class="watermark-banner">
+                *** <?= htmlspecialchars($classification_str) ?> SECURITY CLASSIFICATION — CONTROLLED DISTRIBUTION ***
             </div>
         <?php endif; ?>
 
@@ -117,16 +104,16 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
         </div>
 
         <div class="pdf-header d-flex justify-content-between align-items-center">
-            <div class="flex-grow-1 d-flex justify-content-center align-items-center" style="height: 100%;">
+            <div class="flex-grow-1 d-flex justify-content-center align-items-center me-3" style="min-height: 70px;">
                 <?php if (!empty($company_logo_url)): ?>
-                    <img src="<?= htmlspecialchars($company_logo_url) ?>" alt="Logo" style="height: 100%; max-height: 80px; width: auto; object-fit: contain;" class="mx-auto">
+                    <img src="<?= htmlspecialchars($company_logo_url) ?>" alt="Logo" style="max-height: 75px; width: auto; object-fit: contain;" class="mx-auto">
                 <?php else: ?>
-                    <div class="bg-primary text-white rounded px-4 py-2 fw-bold mx-auto text-center d-flex align-items-center justify-content-center" style="height: 100%;">ORGANIZATION LOGO</div>
+                    <div class="bg-primary text-white rounded px-4 py-2 fw-bold mx-auto text-center d-flex align-items-center justify-content-center">ORGANIZATION LOGO</div>
                 <?php endif; ?>
             </div>
             <div class="text-end d-flex align-items-center">
                 <div class="text-end">
-                    <h4 class="fw-bold mb-0 font-monospace"><?= htmlspecialchars($doc['document_number']) ?></h4>
+                    <h4 class="fw-bold mb-0 font-monospace text-primary"><?= htmlspecialchars($doc['document_number']) ?></h4>
                     <span class="badge bg-secondary">Version: v<?= htmlspecialchars($doc['current_version']) ?></span>
                 </div>
             </div>
@@ -165,7 +152,7 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
 
         <!-- RFO / Incident Details Section -->
         <?php if ($rfo_details): ?>
-            <div class="page-break"></div>
+            <div class="html2pdf__page-break"></div>
             <div class="mb-4 pt-3">
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-2 border-danger">
                     <h4 class="fw-bold text-danger mb-0"><i class="fa-solid fa-triangle-exclamation me-2"></i>Reason For Outage (RFO) Incident Analysis</h4>
@@ -282,11 +269,12 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
             let filename = '<?= htmlspecialchars($doc['document_number']) ?>.pdf';
 
             let opt = {
-                margin:       [0.3, 0.3, 0.3, 0.3],
+                margin:       [0.4, 0.4, 0.4, 0.4],
                 filename:     filename,
                 image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 800 },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] }
             };
 
             html2pdf().set(opt).from(element).save().then(function() {
