@@ -33,6 +33,14 @@ if (($doc['document_type_code'] ?? '') === 'RFO' || stristr($doc['document_type_
     $rfo_timelines = doc_get_rfo_timelines($doc_id);
 }
 
+// Fetch Post-Mortem details and trackable actions if Post-Mortem document type
+$pm_details = null;
+$pm_actions = [];
+if (($doc['document_type_code'] ?? '') === 'PM' || stristr($doc['document_type_name'] ?? '', 'post-mortem') || stristr($doc['document_type_name'] ?? '', 'post mortem')) {
+    $pm_details = doc_get_post_mortem_details($doc_id);
+    $pm_actions = doc_get_post_mortem_actions($doc_id);
+}
+
 // Generate SVG background watermark URI for HTML canvas compatibility
 $svg_text = htmlspecialchars($classification_str, ENT_QUOTES);
 $svg_watermark = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='200'><text x='50%' y='50%' fill='rgba(0,0,0,0.06)' font-size='22' font-weight='bold' font-family='sans-serif' text-anchor='middle' transform='rotate(-30, 150, 100)'>{$svg_text}</text></svg>";
@@ -72,7 +80,7 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
         .signature-stamp { border: 2px dashed #198754; background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 12px; }
         .html2pdf__page-break { page-break-before: always; margin-top: 20px; }
         .section-box { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; margin-bottom: 20px; }
-        .rfo-table th { background-color: #e9ecef; }
+        .pm-table th { background-color: #e9ecef; }
 
         <?php if ($watermark_enabled === '1'): ?>
         .watermark-banner {
@@ -151,8 +159,8 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
 
         <hr class="my-4">
 
-        <!-- Show Document Content only if NOT an RFO report -->
-        <?php if (!$rfo_details): ?>
+        <!-- Show Document Content only if NOT an RFO or Post-Mortem report -->
+        <?php if (!$rfo_details && !$pm_details): ?>
             <div class="mb-4">
                 <h5 class="fw-bold text-dark mb-3">Document Content</h5>
                 <div class="p-4 bg-light rounded border rich-content">
@@ -220,7 +228,7 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
                 <?php if (!empty($rfo_timelines)): ?>
                     <div class="mb-4">
                         <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Chronological Event Timeline</h6>
-                        <table class="table table-sm table-bordered small rfo-table">
+                        <table class="table table-sm table-bordered small pm-table">
                             <thead>
                                 <tr>
                                     <th style="width: 25%;">Timestamp</th>
@@ -236,6 +244,78 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
                                         <td><?= htmlspecialchars($t['event']) ?></td>
                                         <td><?= htmlspecialchars($t['person'] ?: 'N/A') ?></td>
                                         <td><?= htmlspecialchars($t['source'] ?: '') ?> <?= !empty($t['notes']) ? '(' . htmlspecialchars($t['notes']) . ')' : '' ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Post-Mortem Details Section -->
+        <?php if ($pm_details): ?>
+            <div class="mb-4 pt-1">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-2 border-primary">
+                    <h4 class="fw-bold text-primary mb-0"><i class="fa-solid fa-file-contract me-2"></i>Post-Mortem Technical Review Report</h4>
+                </div>
+
+                <div class="section-box">
+                    <h6 class="fw-bold text-dark mb-2">1. Executive Summary & Overview</h6>
+                    <p class="small mb-2"><strong>Executive Summary:</strong> <?= nl2br(htmlspecialchars($pm_details['executive_summary'] ?? 'N/A')) ?></p>
+                    <p class="small mb-0"><strong>Incident Overview:</strong> <?= nl2br(htmlspecialchars($pm_details['incident_overview'] ?? 'N/A')) ?></p>
+                </div>
+
+                <div class="section-box">
+                    <h6 class="fw-bold text-dark mb-2">2. Business & Technical Impact</h6>
+                    <p class="small mb-2"><strong>Business Impact:</strong> <?= nl2br(htmlspecialchars($pm_details['business_impact'] ?? 'N/A')) ?></p>
+                    <p class="small mb-0"><strong>Technical Impact:</strong> <?= nl2br(htmlspecialchars($pm_details['technical_impact'] ?? 'N/A')) ?></p>
+                </div>
+
+                <div class="section-box">
+                    <h6 class="fw-bold text-dark mb-2">3. Analysis & Evaluation</h6>
+                    <p class="small mb-2"><strong>What Happened:</strong> <?= nl2br(htmlspecialchars($pm_details['what_happened'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Root Cause:</strong> <?= nl2br(htmlspecialchars($pm_details['root_cause'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Contributing Factors:</strong> <?= nl2br(htmlspecialchars($pm_details['contributing_factors'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Detection Analysis:</strong> <?= nl2br(htmlspecialchars($pm_details['detection_analysis'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Response Analysis:</strong> <?= nl2br(htmlspecialchars($pm_details['response_analysis'] ?? 'N/A')) ?></p>
+                    <p class="small mb-0"><strong>Recovery Analysis:</strong> <?= nl2br(htmlspecialchars($pm_details['recovery_analysis'] ?? 'N/A')) ?></p>
+                </div>
+
+                <div class="section-box">
+                    <h6 class="fw-bold text-dark mb-2">4. Review & Lessons Learned</h6>
+                    <p class="small mb-2"><strong>What Went Well:</strong> <?= nl2br(htmlspecialchars($pm_details['what_went_well'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>What Did Not Go Well:</strong> <?= nl2br(htmlspecialchars($pm_details['what_did_not_go_well'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Lessons Learned:</strong> <?= nl2br(htmlspecialchars($pm_details['lessons_learned'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Corrective Actions:</strong> <?= nl2br(htmlspecialchars($pm_details['corrective_actions'] ?? 'N/A')) ?></p>
+                    <p class="small mb-2"><strong>Preventative Actions:</strong> <?= nl2br(htmlspecialchars($pm_details['preventative_actions'] ?? 'N/A')) ?></p>
+                    <p class="small mb-0"><strong>Follow-Up Work:</strong> <?= nl2br(htmlspecialchars($pm_details['follow_up_work'] ?? 'N/A')) ?></p>
+                </div>
+
+                <!-- Trackable Action Items Table -->
+                <?php if (!empty($pm_actions)): ?>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-list-check me-2 text-primary"></i>Trackable Post-Mortem Action Items</h6>
+                        <table class="table table-sm table-bordered small pm-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">Action ID</th>
+                                    <th style="width: 35%;">Description</th>
+                                    <th style="width: 20%;">Assigned To</th>
+                                    <th style="width: 10%;">Priority</th>
+                                    <th style="width: 10%;">Status</th>
+                                    <th style="width: 10%;">Due Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($pm_actions as $act): ?>
+                                    <tr>
+                                        <td><code><?= htmlspecialchars($act['action_identifier']) ?></code></td>
+                                        <td><?= htmlspecialchars($act['description']) ?></td>
+                                        <td><?= htmlspecialchars($act['assigned_to'] ?: 'Unassigned') ?></td>
+                                        <td><span class="badge bg-<?= $act['priority'] === 'High' ? 'danger' : ($act['priority'] === 'Medium' ? 'warning text-dark' : 'secondary') ?>"><?= htmlspecialchars($act['priority']) ?></span></td>
+                                        <td><span class="badge bg-<?= $act['status'] === 'Completed' ? 'success' : 'info text-dark' ?>"><?= htmlspecialchars($act['status']) ?></span></td>
+                                        <td><?= htmlspecialchars($act['due_date'] ?: 'N/A') ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
