@@ -9,6 +9,36 @@ if (!has_permission('doc_manager_manage_types') && !has_permission('manage_setti
     die("Access Denied: Administration rights required.");
 }
 
+// Handle Audit Log CSV Export
+if (isset($_GET['export_audit']) && $_GET['export_audit'] === 'csv') {
+    $pdb = doc_get_pdb();
+    $tb = $pdb->getTableName('audit_log');
+    $logs = $pdb->query("SELECT * FROM {$tb} ORDER BY id DESC LIMIT 500")->fetchAll(PDO::FETCH_ASSOC);
+
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="document-audit-logs-' . date('Y-m-d') . '.csv"');
+
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['ID', 'Timestamp', 'User ID', 'Username', 'IP Address', 'Action', 'Object Type', 'Object ID', 'Result', 'Metadata']);
+
+    foreach ($logs as $l) {
+        fputcsv($out, [
+            $l['id'],
+            $l['timestamp'],
+            $l['user_id'],
+            $l['username'],
+            $l['ip_address'],
+            $l['action'],
+            $l['object_type'],
+            $l['object_id'],
+            $l['result'],
+            $l['metadata']
+        ]);
+    }
+    fclose($out);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
     $action = $_POST['action'] ?? '';
@@ -36,7 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             set_flash_message('success', 'Document type template updated successfully.');
             redirect(url_for('doc_manager_admin'));
         } elseif ($action === 'save_verbose_settings') {
-            // Module Enable/Disable Toggles
             doc_set_setting('module_rfo_enabled', !empty($_POST['module_rfo_enabled']) ? '1' : '0');
             doc_set_setting('module_post_mortem_enabled', !empty($_POST['module_post_mortem_enabled']) ? '1' : '0');
             doc_set_setting('module_lawful_enabled', !empty($_POST['module_lawful_enabled']) ? '1' : '0');
@@ -45,13 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             doc_set_setting('module_reports_enabled', !empty($_POST['module_reports_enabled']) ? '1' : '0');
             doc_set_setting('widget_dashboard_enabled', !empty($_POST['widget_dashboard_enabled']) ? '1' : '0');
 
-            // Branding & PDF Generation
             doc_set_setting('company_logo_url', trim($_POST['company_logo_url'] ?? ''));
             doc_set_setting('pdf_watermark_enabled', !empty($_POST['pdf_watermark_enabled']) ? '1' : '0');
             doc_set_setting('pdf_footer_notice', trim($_POST['pdf_footer_notice'] ?? ''));
             doc_set_setting('deadline_alert_days', (int)($_POST['deadline_alert_days'] ?? 3));
 
-            // Canned Snippets
             if (isset($_POST['canned'])) {
                 doc_set_setting('canned_snippets', json_encode($_POST['canned']));
             }
@@ -71,6 +98,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $types = doc_get_all_types();
 $canned = doc_get_canned_paragraphs();
 $settings = doc_get_all_settings();
+
+// Audit logs query
+$pdb = doc_get_pdb();
+$tb_audit = $pdb->getTableName('audit_log');
+$audit_logs = $pdb->query("SELECT * FROM {$tb_audit} ORDER BY id DESC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!-- Quill WYSIWYG Rich Editor Resources -->
@@ -81,7 +113,7 @@ $settings = doc_get_all_settings();
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold mb-0 text-primary"><i class="fa-solid fa-gears me-2"></i>Verbose Document Plugin Administration</h2>
-            <p class="text-muted small mb-0">Granular module toggles, branding, PDF watermarks, canned snippet editor & WYSIWYG document type templates.</p>
+            <p class="text-muted small mb-0">Granular module toggles, branding, PDF watermarks, canned snippet editor, audit logs & WYSIWYG document type templates.</p>
         </div>
         <div>
             <form method="POST" action="<?= url_for('doc_manager_admin') ?>" class="d-inline">
@@ -115,6 +147,11 @@ $settings = doc_get_all_settings();
         <li class="nav-item" role="presentation">
             <button class="nav-link fw-bold" id="templates-tab" data-bs-toggle="tab" data-bs-target="#templates" type="button" role="tab">
                 <i class="fa-solid fa-file-word me-1 text-warning"></i> Types & WYSIWYG Templates
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" role="tab">
+                <i class="fa-solid fa-shield-halved me-1 text-danger"></i> Audit Trail Inspector
             </button>
         </li>
     </ul>
@@ -291,6 +328,52 @@ $settings = doc_get_all_settings();
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 5: Audit Trail Inspector -->
+            <div class="tab-pane fade" id="audit" role="tabpanel">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-shield-halved me-2 text-danger"></i>Append-Only Audit Trail Inspector</h5>
+                        <a href="<?= url_for('doc_manager_admin') ?>&export_audit=csv" class="btn btn-sm btn-outline-success">
+                            <i class="fa-solid fa-file-csv me-1"></i> Export Audit Log CSV
+                        </a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Timestamp</th>
+                                        <th>User</th>
+                                        <th>Action</th>
+                                        <th>Object</th>
+                                        <th>Result</th>
+                                        <th>Metadata</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($audit_logs)): ?>
+                                        <tr><td colspan="7" class="text-center py-4 text-muted">No audit trail entries recorded yet.</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($audit_logs as $log): ?>
+                                            <tr>
+                                                <td><code>#<?= $log['id'] ?></code></td>
+                                                <td><?= date('Y-m-d H:i:s', strtotime($log['timestamp'])) ?></td>
+                                                <td><strong><?= htmlspecialchars($log['username'] ?: 'System') ?></strong></td>
+                                                <td><span class="badge bg-secondary"><?= htmlspecialchars($log['action']) ?></span></td>
+                                                <td><?= htmlspecialchars($log['object_type']) ?> #<?= htmlspecialchars($log['object_id']) ?></td>
+                                                <td><span class="badge bg-<?= $log['result'] === 'SUCCESS' ? 'success' : 'danger' ?>"><?= htmlspecialchars($log['result']) ?></span></td>
+                                                <td><code class="text-muted"><?= htmlspecialchars(substr($log['metadata'] ?? '', 0, 40)) ?>...</code></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>

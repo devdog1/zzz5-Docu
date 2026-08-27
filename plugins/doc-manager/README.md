@@ -1,6 +1,6 @@
 # Document Management System Plugin (`doc-manager`)
 
-An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, audit trail logging, retention disposition management, automated background tasks, configurable background classification watermarks, granular sub-module enable/disable toggles, and professional PDF generation.
+An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, append-only audit trail logging, retention disposition management, automated background tasks, configurable background classification watermarks, verification QR codes, granular sub-module enable/disable toggles, and professional PDF generation.
 
 ---
 
@@ -18,13 +18,15 @@ An enterprise-grade, highly governed Document Management module built for the `z
 11. [Approval Workflows & Version Control](#approval-workflows--version-control)
 12. [Retention & Disposition Management](#retention--disposition-management)
 13. [Background Scheduled Tasks](#background-scheduled-tasks)
-14. [PDF Watermarks & Audit Log](#pdf-watermarks--audit-log)
+14. [PDF Watermarks, Verification QR Code & Audit Trail Inspector](#pdf-watermarks-verification-qr-code--audit-trail-inspector)
 15. [Installation & Database Isolation](#installation--database-isolation)
 
 ---
 
 ## Key Features
 
+- **Verification QR Code**: PDF exports render an inline verification QR code encoding the document verification URL for mobile scanning and instant version verification.
+- **Audit Trail Inspector**: Dedicated tab in Admin Settings for inspecting append-only audit logs with dynamic filtering and CSV export.
 - **Modular Domain Models**: Refactored domain architecture split across dedicated files (`doc-core-models.php`, `doc-types-models.php`, `doc-crud-models.php`, `doc-rfo-models.php`, `doc-postmortem-models.php`, `doc-lawful-models.php`, `doc-legalhold-models.php`, `doc-workflow-models.php`, `doc-retention-models.php`).
 - **Verbose Admin Settings**: Comprehensive tabbed configuration panel for enable/disable sub-module toggles, company logo branding, PDF watermarks, footer notices, deadline alert thresholds, canned text snippets, and document type templates.
 - **Word-Style WYSIWYG Editor**: Create and format document body content with headings, rich text formatting (bold, italic, underline, colors, text alignment, lists, tables), pasted images/logos, and canned paragraphs.
@@ -39,7 +41,6 @@ An enterprise-grade, highly governed Document Management module built for the `z
 - **Legal Holds**: Issue litigation holds across specific documents or categories, freezing deletions and suspending retention expiry.
 - **No Hard Delete Enforcement**: Enforces soft disposition states (`Pending Disposition`, `Destroyed Certificate`) to preserve compliance history.
 - **Background Scheduled Tasks**: Automated daily retention expiry checks and hourly deadline/overdue alert monitoring.
-- **PDF Export**: Renders professional printable document views complete with classification headers, company logo, footers, approval logs, and verification hash codes.
 
 ---
 
@@ -66,6 +67,7 @@ Access via `index.php?route=doc_manager_admin`:
 - **Branding & PDF Export**: Configure company logo URL, PDF background watermark toggle, and custom PDF footer disclaimers.
 - **Deadline Thresholds**: Configure response deadline alert lead times in days.
 - **Canned Snippet Manager**: Edit or add standardized disclaimers and legal notices.
+- **Audit Trail Inspector**: View audit logs with action filters and CSV export.
 
 ---
 
@@ -184,11 +186,11 @@ The plugin registers background scheduled jobs with the framework's `Scheduler`:
 
 ---
 
-## PDF Watermarks & Audit Log
+## PDF Watermarks, Verification QR Code & Audit Trail Inspector
 
+- **Verification QR Code**: Inline QR code rendered on exported PDF documents allowing authorized mobile/scanner verification of record authenticity.
 - **PDF Watermarks**: Administrators can enable or disable repeating diagonal classification background watermarks (`RESTRICTED`, `CONFIDENTIAL`, `INTERNAL`, `PUBLIC`) on PDF exports in Admin settings.
-- **Audit Log**: Every creation, access, update, export, approval, classification change, or legal hold operation is logged in `plug_doc_manager_audit_log` with user ID, IP, timestamp, session ID, and metadata.
-- **PDF Export**: Generates printable document records with security banners, company logo, document metadata, approval signatures, and verification hashes.
+- **Audit Log Inspector**: Dedicated tab in Admin settings displaying audit history with action filters and CSV export.
 
 ---
 

@@ -25,6 +25,9 @@ $company_logo_url = doc_get_setting('company_logo_url', '');
 $watermark_enabled = doc_get_setting('pdf_watermark_enabled', '1');
 $pdf_footer_notice = doc_get_setting('pdf_footer_notice', 'Governed Document Record — Managed by Portal Framework');
 $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
+
+$verify_url = url_for('doc_manager_document_detail') . '&id=' . $doc['id'] . '&v=' . urlencode($doc['verification_code'] ?? '');
+$qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlencode($verify_url);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -44,7 +47,6 @@ $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
         .rich-content img { max-width: 100%; height: auto; }
 
         <?php if ($watermark_enabled === '1'): ?>
-        /* Repeating Diagonal Background Watermark */
         .watermark-container {
             position: fixed;
             top: 0;
@@ -87,7 +89,6 @@ $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
 <body class="p-5">
 
     <?php if ($watermark_enabled === '1'): ?>
-        <!-- Repeating Classification Background Watermark -->
         <div class="watermark-container">
             <?php for ($i = 0; $i < 24; $i++): ?>
                 <div class="watermark-text"><?= htmlspecialchars($classification_str) ?></div>
@@ -116,9 +117,12 @@ $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
                     <small class="text-muted">Official Governed Document Record</small>
                 </div>
             </div>
-            <div class="text-end">
-                <h4 class="fw-bold mb-0 font-monospace"><?= htmlspecialchars($doc['document_number']) ?></h4>
-                <span class="badge bg-secondary">Version: v<?= htmlspecialchars($doc['current_version']) ?></span>
+            <div class="text-end d-flex align-items-center">
+                <div class="me-3 text-end">
+                    <h4 class="fw-bold mb-0 font-monospace"><?= htmlspecialchars($doc['document_number']) ?></h4>
+                    <span class="badge bg-secondary">Version: v<?= htmlspecialchars($doc['current_version']) ?></span>
+                </div>
+                <img src="<?= htmlspecialchars($qr_code_url) ?>" alt="Verification QR Code" style="width: 75px; height: 75px;" class="border p-1 bg-white">
             </div>
         </div>
 
@@ -132,7 +136,7 @@ $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
             <div class="col-6 text-end">
                 <p class="mb-1"><strong>Status:</strong> <?= htmlspecialchars($doc['status']) ?></p>
                 <p class="mb-1"><strong>Created Date:</strong> <?= date('F d, Y', strtotime($doc['created_at'])) ?></p>
-                <p class="mb-1"><strong>Verification Code:</strong> <code class="small"><?= htmlspecialchars(substr($doc['verification_code'] ?? '', 0, 16)) ?>...</code></p>
+                <p class="mb-1"><strong>Verification Hash:</strong> <code class="small"><?= htmlspecialchars(substr($doc['verification_code'] ?? '', 0, 16)) ?>...</code></p>
             </div>
         </div>
 
@@ -180,9 +184,14 @@ $classification_str = strtoupper($doc['classification'] ?? 'INTERNAL');
             </div>
         <?php endif; ?>
 
-        <div class="pdf-footer">
-            <p class="mb-1"><strong><?= htmlspecialchars($doc['classification']) ?></strong> — <?= htmlspecialchars($pdf_footer_notice) ?></p>
-            <p class="mb-0">Document Verification Identifier: <code><?= htmlspecialchars($doc['verification_code'] ?? 'N/A') ?></code></p>
+        <div class="pdf-footer d-flex justify-content-between align-items-center">
+            <div>
+                <p class="mb-1"><strong><?= htmlspecialchars($doc['classification']) ?></strong> — <?= htmlspecialchars($pdf_footer_notice) ?></p>
+                <p class="mb-0">Document Verification Identifier: <code><?= htmlspecialchars($doc['verification_code'] ?? 'N/A') ?></code></p>
+            </div>
+            <div>
+                <small class="text-muted">Scan QR to verify document version</small>
+            </div>
         </div>
     </div>
 </body>
