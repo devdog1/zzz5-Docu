@@ -56,12 +56,40 @@ function doc_plugin_uninstall_tables($purge_tables = false) {
  * INTER-PLUGIN HOOK REGISTRATION
  * Allows other framework plugins (e.g. Incident/Ticket/Monitoring plugins)
  * to initiate an RFO report via `do_action('doc_manager_create_rfo', $data)`
+ * and append timeline entries via `do_action('doc_manager_add_rfo_timeline', $data)`
  * ========================================================= */
 
 add_action('doc_manager_create_rfo', 'doc_handle_create_rfo_hook', 10, 1);
 function doc_handle_create_rfo_hook($data) {
     if (is_array($data)) {
         return doc_create_rfo_report($data);
+    }
+    return false;
+}
+
+add_action('doc_manager_add_rfo_timeline', 'doc_handle_add_rfo_timeline_hook', 10, 1);
+function doc_handle_add_rfo_timeline_hook($data) {
+    if (!is_array($data)) return false;
+
+    $doc_id = (int)($data['document_id'] ?? 0);
+    if (!$doc_id && !empty($data['incident_number'])) {
+        // Resolve doc_id by incident_number
+        $pdb = doc_get_pdb();
+        $tb = $pdb->getTableName('rfo_details');
+        $stmt = $pdb->query("SELECT document_id FROM {$tb} WHERE incident_number = ?", [$data['incident_number']]);
+        $doc_id = (int)$stmt->fetchColumn();
+    }
+
+    if ($doc_id && !empty($data['event'])) {
+        doc_add_rfo_timeline_entry(
+            $doc_id,
+            $data['timestamp'] ?? date('Y-m-d H:i:s'),
+            $data['event'],
+            $data['person'] ?? 'External System',
+            $data['source'] ?? 'Inter-Plugin API',
+            $data['notes'] ?? ''
+        );
+        return true;
     }
     return false;
 }

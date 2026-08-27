@@ -1,35 +1,36 @@
 # Document Management System Plugin (`doc-manager`)
 
-An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, multi-authority approval sign-offs, immutable version control, audit trail logging, retention disposition management, automated background tasks, configurable background classification watermarks, verification QR codes, granular sub-module enable/disable toggles, and professional PDF generation.
+An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, Word-style WYSIWYG rich text formatting, template editing, canned paragraph insertion, security classification controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, multi-authority approval sign-offs, immutable version control, audit trail logging, retention disposition management, automated background tasks, configurable background classification watermarks, verification QR codes, granular sub-module enable/disable toggles, inter-plugin creation and timeline action hooks, and professional PDF generation.
 
 ---
 
 ## Table of Contents
 1. [Key Features](#key-features)
-2. [Modular Domain Architecture](#modular-domain-architecture)
-3. [Verbose Plugin Settings & Module Toggles](#verbose-plugin-settings--module-toggles)
-4. [Word-Style WYSIWYG Editor & Templates](#word-style-wysiwyg-editor--templates)
-5. [Multi-Authority Authorization Sign-Offs](#multi-authority-authorization-sign-offs)
-6. [Security Classifications & RBAC](#security-classifications--rbac)
-7. [Document Types & Auto-Numbering](#document-types--auto-numbering)
-8. [RFO / Incident Report Module](#rfo--incident-report-module)
-9. [Post-Mortem Module & Action Tracking](#post-mortem-module--action-tracking)
-10. [Lawful Request & Chain of Custody Module](#lawful-request--chain-of-custody-module)
-11. [Legal Hold Module](#legal-hold-module)
-12. [Approval Workflows & Version Control](#approval-workflows--version-control)
-13. [Retention & Disposition Management](#retention--disposition-management)
-14. [Background Scheduled Tasks](#background-scheduled-tasks)
-15. [PDF Watermarks, Verification QR Code & Audit Trail Inspector](#pdf-watermarks-verification-qr-code--audit-trail-inspector)
-16. [Installation & Database Isolation](#installation--database-isolation)
+2. [Inter-Plugin Integration & Action Hooks](#inter-plugin-integration--action-hooks)
+3. [Modular Domain Architecture](#modular-domain-architecture)
+4. [Verbose Plugin Settings & Module Toggles](#verbose-plugin-settings--module-toggles)
+5. [Word-Style WYSIWYG Editor & Templates](#word-style-wysiwyg-editor--templates)
+6. [Multi-Authority Authorization Sign-Offs](#multi-authority-authorization-sign-offs)
+7. [Security Classifications & RBAC](#security-classifications--rbac)
+8. [Document Types & Auto-Numbering](#document-types--auto-numbering)
+9. [RFO / Incident Report Module](#rfo--incident-report-module)
+10. [Post-Mortem Module & Action Tracking](#post-mortem-module--action-tracking)
+11. [Lawful Request & Chain of Custody Module](#lawful-request--chain-of-custody-module)
+12. [Legal Hold Module](#legal-hold-module)
+13. [Approval Workflows & Version Control](#approval-workflows--version-control)
+14. [Retention & Disposition Management](#retention--disposition-management)
+15. [Background Scheduled Tasks](#background-scheduled-tasks)
+16. [PDF Watermarks, Verification QR Code & Audit Trail Inspector](#pdf-watermarks-verification-qr-code--audit-trail-inspector)
+17. [Installation & Database Isolation](#installation--database-isolation)
 
 ---
 
 ## Key Features
 
+- **Inter-Plugin Integration**: Other framework plugins (Monitoring, Helpdesk, Ticketing) can trigger RFO creation via `do_action('doc_manager_create_rfo', $data)` and append timeline entries via `do_action('doc_manager_add_rfo_timeline', $data)` or `doc_add_rfo_timeline_entry()`.
 - **Multi-Authority Authorization Sign-offs**: Designate multiple sign-off authorities (specific users or required roles) per workflow step. Generates SHA-256 digital signature audit hashes upon sign-off.
-- **Verification QR Code**: PDF exports render an inline verification QR code encoding the document verification URL for mobile scanning and instant version verification.
 - **Audit Trail Inspector**: Dedicated tab in Admin Settings for inspecting append-only audit logs with dynamic filtering and CSV export.
-- **Modular Domain Models**: Refactored domain architecture split across dedicated files (`doc-core-models.php`, `doc-types-models.php`, `doc-crud-models.php`, `doc-rfo-models.php`, `doc-postmortem-models.php`, `doc-lawful-models.php`, `doc-legalhold-models.php`, `doc-workflow-models.php`, `doc-retention-models.php`).
+- **Modular Domain Models**: Domain architecture split across dedicated files (`doc-core-models.php`, `doc-types-models.php`, `doc-crud-models.php`, `doc-rfo-models.php`, `doc-postmortem-models.php`, `doc-lawful-models.php`, `doc-legalhold-models.php`, `doc-workflow-models.php`, `doc-retention-models.php`).
 - **Verbose Admin Settings**: Comprehensive tabbed configuration panel for enable/disable sub-module toggles, company logo branding, PDF watermarks, footer notices, deadline alert thresholds, canned text snippets, and document type templates.
 - **Word-Style WYSIWYG Editor**: Create and format document body content with headings, rich text formatting (bold, italic, underline, colors, text alignment, lists, tables), pasted images/logos, and canned paragraphs.
 - **Document Templates & Placeholders**: Document types define default HTML templates with dynamic tags: `{ORGANIZATION_LOGO}`, `{DOCUMENT_NUMBER}`, `{TITLE}`, `{CLASSIFICATION}`, `{DEPARTMENT}`, `{DATE}`, and `{OWNER}`.
@@ -43,6 +44,84 @@ An enterprise-grade, highly governed Document Management module built for the `z
 - **Legal Holds**: Issue litigation holds across specific documents or categories, freezing deletions and suspending retention expiry.
 - **No Hard Delete Enforcement**: Enforces soft disposition states (`Pending Disposition`, `Destroyed Certificate`) to preserve compliance history.
 - **Background Scheduled Tasks**: Automated daily retention expiry checks and hourly deadline/overdue alert monitoring.
+
+---
+
+## Inter-Plugin Integration & Action Hooks
+
+Other framework plugins (such as Incident Management, Monitoring, Helpdesk, or Ticketing systems) can programmatically initiate RFO incident reports and append timeline entries within the Document Management System using framework event hooks or direct domain function calls.
+
+### 1. Framework Action Hooks
+
+#### Create an RFO Incident Report (`doc_manager_create_rfo`)
+
+```php
+// Trigger RFO Incident Report creation with initial timeline entries from an external ticketing plugin
+do_action('doc_manager_create_rfo', [
+    'incident_number'         => 'INC-2026-9081',
+    'title'                   => 'Core IP Backhaul Fiber Cut Outage',
+    'service_affected'        => 'Core IP Backhaul',
+    'systems_affected'        => 'Gateway Router Stack 01, Switch Stack B',
+    'customers_affected'      => 'Enterprise Transit Subscriptions',
+    'geographic_areas_affected' => 'US-East Region',
+    'incident_severity'       => 'SEV-1',
+    'classification'          => 'Confidential',
+    'start_datetime'          => '2026-08-18 12:49:00',
+    'detection_datetime'      => '2026-08-18 13:49:00',
+    'impact_description'      => 'Main fiber link severed during third-party excavation.',
+    'initial_symptoms'        => 'BGP session drop, 100% loss on primary interface.',
+    'detection_method'        => 'Zabbix Automated Telemetry',
+    'timeline_entries'        => [
+        [
+            'timestamp' => '2026-08-18 12:49:00',
+            'event'     => 'Primary link optical power loss detected',
+            'person'    => 'Zabbix Sentinel',
+            'source'    => 'Interface Monitoring',
+            'notes'     => 'Automated alarm payload'
+        ],
+        [
+            'timestamp' => '2026-08-18 13:05:00',
+            'event'     => 'NOC On-Call Engineer dispatched fiber repair team',
+            'person'    => 'J. Doe (NOC Lead)',
+            'source'    => 'PagerDuty',
+            'notes'     => 'Ticket #9901 escalated to Field Ops'
+        ]
+    ]
+]);
+```
+
+#### Append an RFO Timeline Entry (`doc_manager_add_rfo_timeline`)
+
+Append new chronological timeline entries to an existing RFO document using either the `document_id` or `incident_number`:
+
+```php
+// Append a new timeline event from an external monitoring or NOC plugin
+do_action('doc_manager_add_rfo_timeline', [
+    'incident_number' => 'INC-2026-9081', // Or 'document_id' => 12
+    'timestamp'       => date('Y-m-d H:i:s'),
+    'event'           => 'Fusing splice completed on core fiber strand',
+    'person'          => 'Field Ops Technician',
+    'source'          => 'OTDR Fiber Tester',
+    'notes'           => 'Splice loss verified at <0.02 dB'
+]);
+```
+
+### 2. Direct Programmatic Invocation
+
+If `plugins/doc-manager/models/doc-rfo-models.php` is loaded, external plugins can invoke domain helpers directly:
+
+```php
+if (function_exists('doc_add_rfo_timeline_entry')) {
+    doc_add_rfo_timeline_entry(
+        $document_id,
+        date('Y-m-d H:i:s'),
+        'Service restoration confirmed by telemetry',
+        'System Monitor',
+        'Zabbix API',
+        'Ping sweep 100% success'
+    );
+}
+```
 
 ---
 
@@ -60,7 +139,7 @@ The plugin business logic is organized into focused, modular domain files under 
 - `doc-core-models.php`: Core database wrapper, settings engine, audit logging, security permission checks.
 - `doc-types-models.php`: Document type administration, auto-numbering, templates, canned snippets.
 - `doc-crud-models.php`: Document CRUD, version history, search, comments, relationships, soft deletion.
-- `doc-rfo-models.php`: RFO / Incident report details and timeline entries.
+- `doc-rfo-models.php`: RFO / Incident report details, inter-plugin API creation, and timeline entries.
 - `doc-postmortem-models.php`: Post-Mortem reviews and trackable action items.
 - `doc-lawful-models.php`: Lawful requests and SHA-256 chain of custody.
 - `doc-legalhold-models.php`: Legal holds and litigation preservation rules.

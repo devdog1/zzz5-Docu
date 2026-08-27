@@ -11,7 +11,7 @@ require_once __DIR__ . '/doc-core-models.php';
  * Programmatically create an RFO / Incident Report document and save its details.
  * Useful for external plugins (e.g., Incident Management, Monitoring, Ticketing) to initiate RFOs.
  *
- * @param array $data Contains title, incident_number, service_affected, systems_affected, impact_description, etc.
+ * @param array $data Contains title, incident_number, service_affected, systems_affected, impact_description, timeline_entries, etc.
  * @return int Created document ID
  */
 function doc_create_rfo_report($data) {
@@ -29,6 +29,7 @@ function doc_create_rfo_report($data) {
 
     doc_save_rfo_details($doc_id, $data);
 
+    // Support single initial timeline entry string
     if (!empty($data['initial_event_timeline'])) {
         doc_add_rfo_timeline_entry(
             $doc_id,
@@ -38,6 +39,23 @@ function doc_create_rfo_report($data) {
             $data['source'] ?? 'Inter-Plugin API',
             $data['notes'] ?? 'Auto-generated event timeline from external plugin trigger'
         );
+    }
+
+    // Support array of timeline entries in creation payload
+    $timeline_entries = $data['timeline_entries'] ?? ($data['timelines'] ?? []);
+    if (is_array($timeline_entries)) {
+        foreach ($timeline_entries as $entry) {
+            if (is_array($entry) && !empty($entry['event'])) {
+                doc_add_rfo_timeline_entry(
+                    $doc_id,
+                    $entry['timestamp'] ?? date('Y-m-d H:i:s'),
+                    $entry['event'],
+                    $entry['person'] ?? ($data['person'] ?? 'System'),
+                    $entry['source'] ?? ($data['source'] ?? 'External Plugin'),
+                    $entry['notes'] ?? ''
+                );
+            }
+        }
     }
 
     doc_audit_log('RFO_INITIATED_EXTERNALLY', 'document', $doc_id, 'SUCCESS', [
@@ -101,6 +119,12 @@ function doc_add_rfo_timeline_entry($doc_id, $timestamp, $event, $person = '', $
         INSERT INTO {$tb} (document_id, timestamp, event, person, source, notes)
         VALUES (?, ?, ?, ?, ?, ?)
     ", [(int)$doc_id, $timestamp, $event, $person, $source, $notes]);
+
+    doc_audit_log('RFO_TIMELINE_ENTRY_ADDED', 'document', $doc_id, 'SUCCESS', [
+        'event' => $event,
+        'person' => $person,
+        'source' => $source
+    ]);
 }
 
 function doc_get_rfo_timelines($doc_id) {
