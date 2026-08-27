@@ -15,6 +15,9 @@ if (!defined('APP_ROOT')) {
 // Load Models & Business Logic
 require_once __DIR__ . '/models/doc-models.php';
 
+// Load Background Scheduled Tasks
+require_once __DIR__ . '/tasks/doc-tasks.php';
+
 /* =========================================================
  * ACTIVATION & DEACTIVATION HOOKS
  * ========================================================= */
@@ -48,6 +51,26 @@ function doc_plugin_uninstall_tables($purge_tables = false) {
         $db->exec($sql);
     }
 }
+
+/* =========================================================
+ * SCHEDULED BACKGROUND TASKS REGISTRATION
+ * ========================================================= */
+
+add_action('init_scheduler', function($scheduler) {
+    $scheduler->registerTask(
+        'doc_retention_check',
+        'doc_task_retention_check',
+        86400, // Daily (24 hours)
+        'doc-manager'
+    );
+
+    $scheduler->registerTask(
+        'doc_deadline_alerts',
+        'doc_task_deadline_alerts',
+        3600, // Hourly
+        'doc-manager'
+    );
+});
 
 /* =========================================================
  * NAVIGATION MENU LINKS FILTER

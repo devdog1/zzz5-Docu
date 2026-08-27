@@ -49,7 +49,7 @@ function doc_can_access_lawful_requests() {
     if (!isset($_SESSION['user_id'])) {
         return false;
     }
-    // Session permissions array is associative: ['perm_name' => true] or indexed list
+    // Check explicit user permissions directly from session, strictly ignoring global admin role inheritance
     $perms = $_SESSION['permissions'] ?? [];
     if (is_array($perms)) {
         if (isset($perms['legal_request.access']) || isset($perms['doc_manager_legal_request_access']) || isset($perms['doc_manager_manage_lawful_requests'])) {
@@ -366,7 +366,7 @@ function doc_get_document($id) {
 function doc_get_document_by_number($number) {
     $pdb = doc_get_pdb();
     $tb = $pdb->getTableName('documents');
-    $stmt = $pdb->query("SELECT d.*, dt.name as document_type_name, dt.code as document_type_code FROM {$tb} d LEFT JOIN " . $pdb->getTableName('document_types') . " dt ON d.document_number = ?", [$number]);
+    $stmt = $pdb->query("SELECT d.*, dt.name as document_type_name, dt.code as document_type_code FROM {$tb} d LEFT JOIN " . $pdb->getTableName('document_types') . " dt ON d.document_type_id = dt.id WHERE d.document_number = ?", [$number]);
     return $stmt->fetch(PDO::FETCH_ASSOC);
 }
 

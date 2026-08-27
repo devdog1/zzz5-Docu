@@ -1,6 +1,6 @@
 # Document Management System Plugin (`doc-manager`)
 
-An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, strict security classification access controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, audit trail logging, retention disposition management, and professional PDF generation.
+An enterprise-grade, highly governed Document Management module built for the `zzz5` portal framework. This plugin delivers dynamic document auto-numbering, strict security classification access controls, RFO/Incident Reporting, Post-Mortems with independent action item tracking, Lawful Work Orders with SHA-256 Chain of Custody, Legal Holds, approval workflows, immutable version control, audit trail logging, retention disposition management, automated background tasks, and professional PDF generation.
 
 ---
 
@@ -14,8 +14,9 @@ An enterprise-grade, highly governed Document Management module built for the `z
 7. [Legal Hold Module](#legal-hold-module)
 8. [Approval Workflows & Version Control](#approval-workflows--version-control)
 9. [Retention & Disposition Management](#retention--disposition-management)
-10. [Immutable Audit Log & PDF Export](#immutable-audit-log--pdf-export)
-11. [Installation & Database Isolation](#installation--database-isolation)
+10. [Background Scheduled Tasks](#background-scheduled-tasks)
+11. [Immutable Audit Log & PDF Export](#immutable-audit-log--pdf-export)
+12. [Installation & Database Isolation](#installation--database-isolation)
 
 ---
 
@@ -28,6 +29,7 @@ An enterprise-grade, highly governed Document Management module built for the `z
 - **Lawful Request Module**: Highly restricted module for court orders, warrants, and preservation demands with independent authorization (`legal_request.access`) and SHA-256 evidence chain of custody.
 - **Legal Holds**: Issue litigation holds across specific documents or categories, freezing deletions and suspending retention expiry.
 - **No Hard Delete Enforcement**: Enforces soft disposition states (`Pending Disposition`, `Destroyed Certificate`) to preserve compliance history.
+- **Background Scheduled Tasks**: Automated daily retention expiry checks and hourly deadline/overdue alert monitoring.
 - **PDF Export**: Renders professional printable document views complete with classification headers, footers, approval logs, and verification hash codes.
 
 ---
@@ -120,6 +122,14 @@ Access via `index.php?route=doc_manager_legal_hold`.
 Access via `index.php?route=doc_manager_retention`.
 - Automatically calculates retention expiry based on document type policies.
 - Expired records enter `Pending Disposition`. Records administrators can approve destruction, generating a permanent, tamper-evident **Destruction Certificate**.
+
+---
+
+## Background Scheduled Tasks
+
+The plugin registers background scheduled jobs with the framework's `Scheduler`:
+1. **`doc_retention_check`** (Interval: 86,400s / Daily): Scans active documents whose retention period has expired and marks them as `Pending Disposition`.
+2. **`doc_deadline_alerts`** (Interval: 3,600s / Hourly): Scans for upcoming lawful request response deadlines and overdue post-mortem action items, logging alert notifications.
 
 ---
 
