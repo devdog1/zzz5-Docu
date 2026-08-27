@@ -206,8 +206,19 @@ add_action('index_dashboard_widgets', function($userContext) {
     }
 
     $user_id = (int)($_SESSION['user_id'] ?? 1);
+    $user_data = current_user();
+    $user_name = $user_data['name'] ?? ($user_data['display_name'] ?? 'User');
+
     $my_drafts = doc_search_documents(['status' => 'Draft']);
     $my_drafts = array_filter($my_drafts, fn($d) => (int)$d['owner_user_id'] === $user_id);
+
+    $all_actions = doc_get_post_mortem_actions();
+    $my_actions = array_filter($all_actions, function($a) use ($user_id, $user_name) {
+        if ($a['status'] === 'Completed') return false;
+        $assigned = strtolower(trim($a['assigned_to'] ?? ''));
+        if (empty($assigned)) return false;
+        return stristr($assigned, (string)$user_id) || stristr($assigned, strtolower($user_name));
+    });
     ?>
     <div class="col-12 col-md-6 col-lg-4 widget-block" data-widget-key="doc_manager_quick_widget" data-widget-title="Document Management Quick Hub">
         <div class="card shadow-sm border-start border-5 border-primary text-start">
@@ -218,13 +229,20 @@ add_action('index_dashboard_widgets', function($userContext) {
                     </div>
                     <div>
                         <h6 class="card-title fw-bold mb-0 text-dark">Document Governance</h6>
-                        <small class="text-muted">Document Management System</small>
+                        <small class="text-muted">My Work & Pending Items</small>
                     </div>
                 </div>
                 <hr class="my-2">
-                <p class="card-text small mb-2"><strong>Active Draft Documents:</strong> <span class="badge bg-primary"><?=$count = count($my_drafts)?> Drafts</span></p>
+                <div class="d-flex justify-content-between align-items-center mb-1 small">
+                    <span>Draft Documents:</span>
+                    <span class="badge bg-primary"><?= count($my_drafts) ?> Pending</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 small">
+                    <span>Assigned PM Actions:</span>
+                    <span class="badge bg-warning text-dark"><?= count($my_actions) ?> Assigned</span>
+                </div>
                 <div class="d-grid">
-                    <a href="<?= url_for('doc_manager_dashboard') ?>" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i> Open Repository Hub</a>
+                    <a href="<?= url_for('doc_manager_dashboard') ?>" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i> Open Governance Dashboard</a>
                 </div>
             </div>
         </div>

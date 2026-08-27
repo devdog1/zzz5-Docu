@@ -82,21 +82,6 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
         .section-box { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; margin-bottom: 20px; }
         .pm-table th { background-color: #e9ecef; }
 
-        <?php if ($watermark_enabled === '1'): ?>
-        .watermark-banner {
-            text-align: center;
-            font-size: 11px;
-            font-weight: bold;
-            color: #6c757d;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            padding: 4px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-            margin-bottom: 15px;
-        }
-        <?php endif; ?>
-
         @media print {
             .no-print { display: none !important; }
             body { background: #fff; padding: 0; }
@@ -116,12 +101,6 @@ $auto_download = isset($_GET['download']) && $_GET['download'] === '1';
     </div>
 
     <div id="pdfContent">
-        <?php if ($watermark_enabled === '1'): ?>
-            <div class="watermark-banner">
-                *** <?= htmlspecialchars($classification_str) ?> SECURITY CLASSIFICATION — CONTROLLED DISTRIBUTION ***
-            </div>
-        <?php endif; ?>
-
         <div class="classification-header <?= $classification_str ?>">
             <?= $classification_str ?> — AUTHORIZED ACCESS ONLY
         </div>

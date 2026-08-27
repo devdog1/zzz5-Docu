@@ -6,11 +6,21 @@ if (!defined('APP_ROOT')) {
 require_once __DIR__ . '/../models/doc-models.php';
 
 $user_id = (int)($_SESSION['user_id'] ?? 1);
-$user_name = current_user()['name'] ?? 'User';
+$current_user_data = current_user();
+$user_name = $current_user_data['name'] ?? ($current_user_data['display_name'] ?? 'User');
 
 // Search / Filter documents
 $my_drafts = doc_search_documents(['status' => 'Draft']);
 $my_drafts = array_filter($my_drafts, fn($d) => (int)$d['owner_user_id'] === $user_id);
+
+// User Assigned Post-Mortem Actions
+$all_actions = doc_get_post_mortem_actions();
+$my_actions = array_filter($all_actions, function($a) use ($user_id, $user_name) {
+    if ($a['status'] === 'Completed') return false;
+    $assigned = strtolower(trim($a['assigned_to'] ?? ''));
+    if (empty($assigned)) return false;
+    return stristr($assigned, (string)$user_id) || stristr($assigned, strtolower($user_name));
+});
 
 $all_rfos = doc_search_documents(['type_id' => doc_get_type_id_by_code('RFO')]);
 $open_rfos = array_filter($all_rfos, fn($d) => !in_array($d['status'], ['Approved', 'Closed', 'Archived']));
@@ -18,7 +28,6 @@ $open_rfos = array_filter($all_rfos, fn($d) => !in_array($d['status'], ['Approve
 $all_pms = doc_search_documents(['type_id' => doc_get_type_id_by_code('PM')]);
 $outstanding_pms = array_filter($all_pms, fn($d) => !in_array($d['status'], ['Approved', 'Closed', 'Archived']));
 
-$all_actions = doc_get_post_mortem_actions();
 $overdue_actions = array_filter($all_actions, function($a) {
     return $a['status'] !== 'Completed' && !empty($a['due_date']) && strtotime($a['due_date']) < time();
 });
@@ -89,8 +98,8 @@ if ($can_legal) {
                             <i class="fa-solid fa-clipboard-list fs-4"></i>
                         </div>
                         <div>
-                            <span class="text-muted small d-block">Outstanding Post-Mortems</span>
-                            <h3 class="fw-bold mb-0"><?= count($outstanding_pms) ?></h3>
+                            <span class="text-muted small d-block">My Assigned Action Items</span>
+                            <h3 class="fw-bold mb-0"><?= count($my_actions) ?></h3>
                         </div>
                     </div>
                 </div>
@@ -131,35 +140,50 @@ if ($can_legal) {
     <?php endif; ?>
 
     <div class="row g-4">
-        <!-- Left: My Work & Actions -->
+        <!-- Left: My Work & Pending Items -->
         <div class="col-lg-7">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-user-check me-2 text-primary"></i>My Work & Pending Items</h5>
+                    <span class="badge bg-primary fs-6"><?= count($my_drafts) + count($my_actions) ?> Items</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Doc #</th>
-                                    <th>Title</th>
-                                    <th>Classification</th>
+                                    <th>Item Code</th>
+                                    <th>Type</th>
+                                    <th>Description / Title</th>
+                                    <th>Priority / Classification</th>
                                     <th>Status</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (empty($my_drafts)): ?>
-                                    <tr><td colspan="5" class="text-center text-muted py-4">No pending draft documents.</td></tr>
+                                <?php if (empty($my_drafts) && empty($my_actions)): ?>
+                                    <tr><td colspan="6" class="text-center text-muted py-4">No pending drafts or assigned post-mortem action items.</td></tr>
                                 <?php else: ?>
+                                    <!-- Pending Drafts -->
                                     <?php foreach ($my_drafts as $doc): ?>
                                         <tr>
                                             <td class="fw-bold"><code><?= htmlspecialchars($doc['document_number']) ?></code></td>
+                                            <td><span class="badge bg-secondary">Draft Doc</span></td>
                                             <td><?= htmlspecialchars($doc['title']) ?></td>
-                                            <td><span class="badge bg-secondary"><?= htmlspecialchars($doc['classification']) ?></span></td>
+                                            <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($doc['classification']) ?></span></td>
                                             <td><span class="badge bg-info text-dark"><?= htmlspecialchars($doc['status']) ?></span></td>
                                             <td><a href="<?= url_for('doc_manager_document_detail') ?>&id=<?= $doc['id'] ?>" class="btn btn-sm btn-primary">Open</a></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <!-- Assigned Post-Mortem Action Items -->
+                                    <?php foreach ($my_actions as $act): ?>
+                                        <tr>
+                                            <td class="fw-bold"><code><?= htmlspecialchars($act['action_identifier']) ?></code></td>
+                                            <td><span class="badge bg-warning text-dark">PM Action</span></td>
+                                            <td><?= htmlspecialchars($act['description']) ?></td>
+                                            <td><span class="badge bg-<?= $act['priority'] === 'High' ? 'danger' : 'secondary' ?>"><?= htmlspecialchars($act['priority']) ?></span></td>
+                                            <td><span class="badge bg-primary"><?= htmlspecialchars($act['status']) ?></span></td>
+                                            <td><a href="<?= url_for('doc_manager_post_mortem') ?>&id=<?= $act['document_id'] ?>" class="btn btn-sm btn-outline-warning text-dark fw-bold">View PM</a></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
